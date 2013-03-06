@@ -34,7 +34,7 @@
 # define STIFR	TIFR1
 # define STIMSK	TIMSK1
 
-#elif defined(_AVR_IOTN2313_H_)
+#elif defined(_AVR_IOTN861_H_)
 
 # define SRX     PA7			// ICP on tiny44
 # define SRXPIN  PINA

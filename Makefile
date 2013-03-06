@@ -9,9 +9,9 @@ PROG = xostick
 SRCS = main.c monitor.c util.c timer.c suart.c
 OBJS = $(subst .c,.o,$(SRCS))
 
-# current code assumes ATTiny2313.  (it uses UART, 16 bit timer, and
-# input capture event interrupt.)
-MCU = attiny2313
+# current code assumes ATTiny861.
+MCU = attiny861
+# device is shipped at 1Mhz.  if you play with the pre-scaler, change this.
 F_CPU = 1000000
 
 # location of cross-compiler -- edit to suit

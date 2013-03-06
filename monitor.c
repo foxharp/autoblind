@@ -18,6 +18,7 @@
 #include <avr/pgmspace.h>
 #include "timer.h"
 #include "common.h"
+#include "suart.h"
 #include "util.h"
 
 #define ctrl(c) (c ^ 0x40)
@@ -29,7 +30,8 @@
 
 #define QUICKFOX "The Quick Brown Fox Jumps Over The Lazy Dog\n"
 
-#if defined(MONITOR)
+#ifndef NO_MONITOR
+#ifndef MINIMAL_MONITOR
 
 static unsigned char line[16];
 static unsigned char l;
@@ -126,10 +128,6 @@ void monitor(void)
 
 	switch (cmd) {
 	case '\0':
-		break;
-
-	case 'b':
-		battery_set_debug(n);
 		break;
 
 #if 1
@@ -247,7 +245,8 @@ void monitor(void)
 }
 
 
-#elif defined(MINIMAL_MONITOR)
+#else
+
 // smaller version, might be useful
 
 void monitor(void)
@@ -272,15 +271,6 @@ void monitor(void)
 	case 'v':
 		putstr(BANNER);
 		break;
-
-	case 'a':
-		adc_fastdump = 1000;
-		break;
-
-	case 'q':
-		adc_fastdump = 0;
-		break;
-
 
 	case 'x':
 		for (i = 0; i < 20; i++)
@@ -307,4 +297,5 @@ void monitor(void)
 	}
 }
 
+#endif
 #endif

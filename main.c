@@ -23,8 +23,8 @@ void hardware_setup(void)
 	MCUSR &= ~(1 << WDRF);
 	wdt_disable();
 
-	suart_init();
 	init_timer();
+	suart_init();
 }
 
 int main()
@@ -34,8 +34,9 @@ int main()
 	sei();
 
 	while (1) {
-
+#ifndef NO_MONITOR
 		monitor();
+#endif
 		led_handle();
 		// process();
 	}

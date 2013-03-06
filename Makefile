@@ -12,7 +12,9 @@ HEADERS = $(shell echo *.h)
 OBJS = $(subst .c,.o,$(SRCS))
 
 # CFLAGS = -DNO_MSTIMER   # millisecond timer
+# CFLAGS = -DNO_MONITOR -DNO_RECEIVE   # uart reception
 # CFLAGS = -DNO_RECEIVE   # uart reception
+# CFLAGS = -DMINIMAL_MONITOR
 
 # current code assumes ATTiny861.
 MCU = attiny861

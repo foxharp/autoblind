@@ -7,7 +7,12 @@ VERSION = $(shell date +%y%m%d-%H%M)
 
 PROG = xostick
 SRCS = main.c monitor.c util.c timer.c suart.c
+HEADERS = $(shell echo *.h)
+
 OBJS = $(subst .c,.o,$(SRCS))
+
+# CFLAGS = -DNO_MSTIMER   # millisecond timer
+# CFLAGS = -DNO_RECEIVE   # uart reception
 
 # current code assumes ATTiny861.
 MCU = attiny861
@@ -25,7 +30,7 @@ SIZE=$(CROSS)size
 OBJCOPY = $(CROSS)objcopy
 OBJDUMP = $(CROSS)objdump
 
-CFLAGS = -c -Os -Wwrite-strings -Wall -mmcu=$(MCU)
+CFLAGS += -c -Os -Wwrite-strings -Wall -mmcu=$(MCU)
 CFLAGS += -DF_CPU=$(F_CPU)UL
 CFLAGS += -Wa,-adhlns=$(<:%.c=%.lst)
 CFLAGS += -DPROGRAM_VERSION="\"$(PROG)-$(VERSION)\""
@@ -34,6 +39,10 @@ LFLAGS = -mmcu=$(MCU)
 HOSTCC = gcc
 
 all: $(PROG).hex $(PROG).lss
+
+# builds are quick, so just make all objects depend on all headers,
+# rather than having to track every dependency.
+$(OBJS): $(HEADERS)
 
 $(PROG).out: $(OBJS)
 	@-test -f $(PROG).out && (echo size was: ; $(SIZE) $(PROG).out)

@@ -14,6 +14,8 @@
 #include "util.h"
 #include "common.h"
 
+#ifndef NO_MSTIMER
+
 time_t milliseconds;
 
 #define PRINT_TSTAMPS 1
@@ -40,13 +42,20 @@ void init_timer(void)
 {
 	// set up for simple overflow operation
 	TCCR1A = 0;		// normal
-	TCCR1B = bit(WGM12) | bit(CS10);   // CTC, and prescaler is 1
-	OCR1A = F_CPU / 1000;  // divide 16Mhz by 16000 to get 1000hz ints
-	TIMSK1 = bit(OCIE1A);
+#if F_CPU == 1000000
+	TCCR1B = bit(CS10);   // prescaler is 1
+#elif F_CPU == 8000000
+	TCCR1B = bit(CS12);   // prescaler is 8
+#endif
+	// divide 1Mhz by 1000 to get millisecond interrupts
+	TC1H = (1000 >> 8) & 0xff;
+	OCR1A = 1000 & 0xff;
+
+	TIMSK |= bit(TOIE1);
 
 }
 
-ISR(TIMER1_COMPA_vect)
+ISR(TIMER1_OVF_vect)
 {
 	milliseconds++;
 
@@ -85,3 +94,4 @@ void short_delay(unsigned int n)
         }
 }
 
+#endif

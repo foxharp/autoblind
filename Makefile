@@ -44,13 +44,14 @@ all: $(PROG).hex $(PROG).lss
 
 # builds are quick, so just make all objects depend on all headers,
 # rather than having to track every dependency.
-$(OBJS): $(HEADERS)
+$(OBJS): $(HEADERS) Makefile
 
 $(PROG).out: $(OBJS)
-	@-test -f $(PROG).out && (echo size was: ; $(SIZE) $(PROG).out)
+#	output previous object size, if any
+	@-test -f $(PROG).out && (echo size was: ; $(SIZE) $(PROG).out) || true
 	$(LD) -o $@ $(LFLAGS) $(OBJS)
 	$(NM) -n $@ >$(PROG).map
-	@echo size is:
+	@echo current size is:
 	@$(SIZE) $(PROG).out
 
 $(PROG).hex: $(PROG).out

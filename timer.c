@@ -42,26 +42,30 @@ void init_timer(void)
 {
 	// set up for simple overflow operation
 	TCCR1A = 0;		// normal
+
+	// the counter runs at a microsecond per tick
 #if F_CPU == 1000000
 	TCCR1B = bit(CS10);   // prescaler is 1
 #elif F_CPU == 8000000
 	TCCR1B = bit(CS12);   // prescaler is 8
 #endif
-	// divide 1Mhz by 1000 to get millisecond interrupts
+	// 1000 usec per msec
 	TC1H = (1000 >> 8) & 0xff;
-	OCR1A = 1000 & 0xff;
+	OCR1D = 1000 & 0xff;
 
-	TIMSK |= bit(TOIE1);
+	TIMSK |= bit(OCIE1D);
 
 }
 
-ISR(TIMER1_OVF_vect)
+ISR(TIMER1_COMPD_vect)
 {
 	milliseconds++;
 
 	if (milliseconds % 1000 == 0) {
 		led_flash();
 	}
+
+	timer10bit_add(OCR1D, 1000);
 }
 
 time_t get_ms_timer(void)

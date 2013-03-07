@@ -59,12 +59,6 @@
 #endif
 
 void putch(char c);
-void putstr_p(const prog_char * s);
-#if ! ALL_STRINGS_PROGMEM
-void putstr(const char *s);
-#else
-#define putstr(s) putstr_p(PSTR(s))
-#endif
 
 #ifndef NO_RECEIVE
 extern volatile unsigned char srx_done;

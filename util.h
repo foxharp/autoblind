@@ -11,6 +11,12 @@ void puthex32(long l);
 
 void putdec16(unsigned int i);
 
+void putstr_p(const prog_char * s);
+#if ! ALL_STRINGS_PROGMEM
+void putstr(const char *s);
+#else
+#define putstr(s) putstr_p(PSTR(s))
+#endif
 void init_led(void);
 void led_handle(void);
 void led_flash(void);

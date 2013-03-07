@@ -70,6 +70,22 @@ void putdec16(unsigned int i)
 	putchar('0' + (i%10));
 }
 
+#if ! ALL_STRINGS_PROGMEM
+void putstr(const prog_char * s)	// send string
+{
+	while (*s)
+		putch(*s++);
+}
+#endif
+
+void putstr_p(const prog_char * s)
+{
+	char c;
+	while ((c = pgm_read_byte(s++)))
+		putch(c);
+}
+
+
 # define PORTLED PORTB
 # define BITLED PB6
 # define DDRLED DDRB

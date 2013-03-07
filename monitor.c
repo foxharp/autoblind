@@ -161,7 +161,7 @@ void monitor(void)
 #endif
 	case 't':
 		{
-		static char *teststring = "foobar";
+		static const char *teststring = "foobar";
 		printf("testing: 0x%x, %s\n", 64, "hello");
 		p_hex(n);
 		p_hex(n * 2); crnl();

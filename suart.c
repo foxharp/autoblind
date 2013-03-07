@@ -17,6 +17,7 @@
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include "common.h"
+#include "timer.h"
 #include "suart.h"
 
 #define TX_INVERT 0
@@ -40,29 +41,34 @@ unsigned char srx_tmp;
 
 void suart_init(void)
 {
-	// suart.c uses the 16 bit timer.  that could change, if F_CPU is
-	// slow enough to allow bit rates to be timed in 8 bits.  but the
-	// overhead of the clock interrupt is very low, so we'll just use
-	// the set 8-bit timer0
+	// timer_init has already configured the rate
+
 	OCR1A = TCNT1 + 1;			// force first compare
 	TCCR1A = bit(COM1A1) | bit(COM1A0);	// set OC1A high, T1 mode 0
-#if RX_INVERT
-	// noise canceller, 0>1 transition,
-	TCCR1B = bit(ICNC1) | bit(CS10) | bit(ICES1);
-#else
-	// noise canceller, 1>0 transition,
-	TCCR1B = bit(ICNC1) | bit(CS10);
-#endif
-	// CLK/1, T1 mode 0
-	STIFR = bit(ICF1);			// clear pending interrupt
-	STIMSK = bit(OCIE1A);		// enable tx
+
+	STIMSK |= bit(OCIE1A);			// enable tx
+	stx_count = 0;				// nothing to sent
+	STXDDR |= bit(STX);			// TX output
+
 #ifndef NO_RECEIVE
-	STIMSK |= bit(ICIE1);		// enable rx and wait for start
+# if RX_USE_INPUT_CAPTURE_INT
+	// enable noise canceller
+	TCCR1B = bit(ICNC1);
+#  if RX_INVERT
+	// rising rather than falling transition
+	TCCR1B |= bit(ICES1);
+#  endif
+	// CLK/1, T1 mode 0
+	STIFR = bit(ICF1);	// clear pending interrupt
+	STIMSK |= bit(ICIE1);	// enable rx and wait for start
+# else
+	MCUCR = bit(ISC01);	// falling edge on INT0 (and INT1)
+	GIFR = bit(INTF0);	// clear pending interrupt
+	GIMSK = bit(INT0);	// enable rx and wait for start bit
+# endif
 
 	srx_done = 0;				// nothing received
 #endif
-	stx_count = 0;				// nothing to sent
-	STXDDR |= bit(STX);			// TX output
 }
 
 
@@ -75,10 +81,19 @@ unsigned char getch(void)	// get byte
 }
 
 
-SIGNAL(SIG_INPUT_CAPTURE1)		// rx start
+#if RX_USE_INPUT_CAPTURE_INT
+ISR(TIMER1_CAPT_vect)		// rx start
+#else
+ISR(INT0_vect)		// rx start
+#endif
 {
 	// scan 1.5 bits after start
+#if RX_USE_INPUT_CAPTURE_INT
 	OCR1B = ICR1 + (unsigned int) (3 * BIT_TIME / 2);
+#else
+	GIMSK &= ~bit(INT0);
+	OCR1B = TCNT1 + (unsigned int) (3 * BIT_TIME / 2);
+#endif
 
 	srx_tmp = 0;				// clear bit storage
 	srx_mask = 1;				// bit mask
@@ -92,14 +107,14 @@ SIGNAL(SIG_INPUT_CAPTURE1)		// rx start
 }
 
 
-SIGNAL(SIG_OUTPUT_COMPARE1B)
+ISR(TIMER1_COMPB_vect)
 {
 	unsigned char in = SRXPIN;	// scan rx line
 
 	if (srx_mask) {
 		OCR1B += BIT_TIME;		// next bit slice
 #if RX_INVERT
-		if (!(in & 1 << SRX))
+		if (!(in & bit(SRX)))
 #else
 		if (in & bit(SRX))
 #endif
@@ -108,22 +123,30 @@ SIGNAL(SIG_OUTPUT_COMPARE1B)
 	} else {
 		srx_done = 1;			// mark rx data valid
 		srx_data = srx_tmp;		// store rx data
+		STIMSK = bit(OCIE1A);		// enable tx
+#if RX_USE_INPUT_CAPTURE_INT
 		STIFR = bit(ICF1);		// clear pending interrupt
-		STIMSK = bit(ICIE1) | bit(OCIE1A);	// enable tx and wait for start
+		STIMSK |= bit(ICIE1)		// enable rx
+#else
+		GIFR = bit(INTF0);		// clear pending interrupt
+		GIMSK = bit(INT0);		// enable rx
+#endif
 	}
 }
 #endif
 
 
-void putch(char val)			// send byte
+void putch(char val)		// send byte
 {
 	if (val == '\n')
 		putch('\r');
-	while (stx_count);			// until last byte finished
-	stx_data = ~val;			// invert data for Stop bit generation
-	stx_count = 10;				// 10 bits: Start + data + Stop
-}
 
+	while (stx_count)	// until last byte finished
+	    /* loop */ ;
+
+	stx_data = ~val;	// invert data for Stop bit generation
+	stx_count = 10;		// 10 bits: Start + data + Stop
+}
 
 #if ! ALL_STRINGS_PROGMEM
 void putstr(const prog_char * s)	// send string
@@ -141,28 +164,28 @@ void putstr_p(const prog_char * s)
 }
 
 
-
-SIGNAL(SIG_OUTPUT_COMPARE1A)	// tx bit
+ISR(TIMER1_COMPA_vect)	// tx bit
 {
 	unsigned char dout;
 	unsigned char count;
 
-	OCR1A += BIT_TIME;			// next bit slice
+	timer10bit_add(OCR1A, BIT_TIME);	// next bit slice
+
 	count = stx_count;
 
 	if (count) {
 		stx_count = --count;	// count down
 #if TX_INVERT
-		dout = 1 << COM1A1 ^ 1 << COM1A0;	// set high on next compare
+		dout = bit(COM1A1)|bit(COM1A0);	// set high on next compare
 #else
-		dout = 1 << COM1A1;		// set low on next compare
+		dout = bit(COM1A1);		// set low on next compare
 #endif
 		if (count != 9) {		// no start bit
 			if (!(stx_data & 1))	// test inverted data
 #if TX_INVERT
-				dout = 1 << COM1A1;	// set low on next compare
+				dout = bit(COM1A1);	// set low on next compare
 #else
-				dout = 1 << COM1A1 ^ 1 << COM1A0;	// set high on next compare
+				dout = bit(COM1A1)|bit(COM1A0);	// set high on next compare
 #endif
 			stx_data >>= 1;		// shift zero in from left
 		}

@@ -36,14 +36,19 @@
 
 #elif defined(_AVR_IOTN861_H_)
 
-# define SRX     PA7			// ICP on tiny44
+#if RX_USE_INPUT_CAPTURE_INT
+# define SRX     PA4			// ICP on tiny44
 # define SRXPIN  PINA
+#else
+# define SRX     PB6			// INT0 on tiny44
+# define SRXPIN  PINB
+#endif
 
 # define STX     PA6			// OC1A on tiny44
 # define STXDDR  DDRA
 
-# define STIFR	TIFR1
-# define STIMSK	TIMSK1
+# define STIFR	TIFR
+# define STIMSK	TIMSK
 
 #else
 # error
@@ -63,8 +68,10 @@ void putstr(const char *s);
 
 #ifndef NO_RECEIVE
 extern volatile unsigned char srx_done;
-#define kbhit()	(srx_done)		// true if byte received
 unsigned char getch(void);
+#define kbhit()	(srx_done)		// true if byte received
+#else
+#define kbhit()	(0)			// never true
 #endif
 
 extern volatile unsigned char stx_count;

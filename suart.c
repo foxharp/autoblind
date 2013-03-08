@@ -159,6 +159,10 @@ ISR(TIMER1_COMPA_vect)	// tx bit
 
 	count = stx_count;
 
+	// search for "Table 12-8.  Compare Output Mode, Normal Mode
+	// (non-PWM)" or something similar in the datasheet to see
+	// what's happening here.
+
 	if (count) {
 		stx_count = --count;	// count down
 #if TX_INVERT

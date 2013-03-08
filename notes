@@ -1,0 +1,7 @@
+
+pin restrictions:
+
+    IR needs to be on an input capture pin:  PA4 on attiny861
+
+    RX serial needs to be on INT0:  PB6 on attiny861
+    TX serial needs to be on OC1A:  PB1 on attiny861

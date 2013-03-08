@@ -10,7 +10,6 @@
  */
 
 #include <ctype.h>
-#include <stdio.h>
 #include <avr/io.h>
 #include <avr/wdt.h>
 #include <avr/power.h>
@@ -20,6 +19,9 @@
 #include "common.h"
 #include "suart.h"
 #include "util.h"
+#ifdef USE_PRINTF
+#include <stdio.h>
+#endif
 
 #define ctrl(c) (c ^ 0x40)
 #define DEL 0x7f
@@ -162,7 +164,7 @@ void monitor(void)
 	case 't':
 		{
 		static const char *teststring = "foobar";
-		printf("testing: 0x%x, %s\n", 64, "hello");
+		// printf("testing: 0x%x, %s\n", 64, "hello");
 		p_hex(n);
 		p_hex(n * 2); crnl();
 		p_dec(n);

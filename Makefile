@@ -16,6 +16,9 @@ OBJS = $(subst .c,.o,$(SRCS))
 # CFLAGS = -DNO_RECEIVE   # uart reception
 # CFLAGS = -DMINIMAL_MONITOR
 
+# note: printf works, but costs 1500 bytes
+# CFLAGS = -DUSE_PRINTF   
+
 # current code assumes ATTiny861.
 MCU = attiny861
 # device is shipped at 1Mhz.  if you play with the pre-scaler, change this.

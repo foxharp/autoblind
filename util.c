@@ -7,13 +7,15 @@
  *
  */
 
-#include <stdio.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include "suart.h"
 #include "timer.h"
 #include "common.h"
+
+#ifdef USE_PRINTF
+#include <stdio.h>
 
 static int stdio_putchar(char c, FILE *stream);
 
@@ -31,6 +33,9 @@ util_init(void)
 {
 	stdout = &mystdout;
 }
+#else
+void util_init(void) {}
+#endif
 
 void puthex(unsigned char i)
 {
@@ -67,7 +72,7 @@ void putdec16(unsigned int i)
 {
 	if (i > 9)
 		putdec16(i/10);
-	putchar('0' + (i%10));
+	putch('0' + (i%10));
 }
 
 #if ! ALL_STRINGS_PROGMEM

@@ -37,15 +37,15 @@
 #elif defined(_AVR_IOTN861_H_)
 
 #if RX_USE_INPUT_CAPTURE_INT
-# define SRX     PA4			// ICP on tiny44
+# define SRX     PA4			// ICP on tiny??
 # define SRXPIN  PINA
 #else
-# define SRX     PB6			// INT0 on tiny44
+# define SRX     PB6			// INT0 on tiny861
 # define SRXPIN  PINB
 #endif
 
-# define STX     PA6			// OC1A on tiny44
-# define STXDDR  DDRA
+# define STX     PB1			// OC1A on tiny44
+# define STXDDR  DDRB
 
 # define STIFR	TIFR
 # define STIMSK	TIMSK

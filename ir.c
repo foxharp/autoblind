@@ -1,67 +1,14 @@
 /*
- * avrlirc.c - IR Remote control to RS323 receiver
- *
- * run-length encodes the ir pulse/space receive signal to
- * offload PC of low level timing.
- *
- * AVR ATTiny2313 pinout :
- *                         ----------
- *  (rst for prog) /reset |1       20| Vcc
- *  (dbg only)    rxd,pd0 |2       19| pb7,pci7,scl   (scl, for prog)
- *  (to pin 16)   txd,pd1 |3       18| pb6,pci6,miso  (miso, for prog)
- *              xtal2,out |4       17| pb5,pci5,mosi  (mosi, for prog)
- *              xtal1,in  |5       16| pb4,pci4,oc1b  (txout, from pin 3)
- *               int0,pd2 |6       15| pb3,pci3,oc1a  (/txout, to DB9-2)
- * (gnd for 'U' loop) pd3 |7       14| pb2,pci2,oc0a
- *  (dbg led #2)   t0,pd4 |8       13| pb1,pci1,ain1
- *  (act led #1)   t1,pd5 |9       12| pb0,pci0,ain0
- *  (db-9 pin 5)      Gnd |10      11| pd6,icp        (input, IR-Recv))
- *                         ----------
- *                                     (pins 12-19 available as inputs)
- *
- *
- * hardware setup:
- * ATTiny2313 running from internal 8Mhz osc.  pins 15/16 form a
- * "software inverter" which can be used in place of a hardware
- * RS232 line driver.  (i.e., pin 15 will drive the RS232 RX line
- * directly, at TTL levels.  most consumer-grade serial ports
- * will tolerate this.)
- *
- * for debug, if you want to send characters _to_ the avr, or if
- * you want more reliable/standard RS232 interfacing, use
- * MAX232/3 or equivalent to connect rxd/txd to db-9 pins 2 and
- * 3.  5V supplied from USB serial device, which is also used for
- * serial connection.
- * 
- * for high-speed (115200) operation, use a crystal with a couple
- * 22pf caps.  at high speeds, you'll probably need to use txd
- * (pin 3) directly, and connect it via an RS232 line driver
- * (max232 or equiv).
- *
  * the IR receiver should be something like the
- * Panasonic PNA4602M (5V), or   (noise?)
- * Sharp GP1UD261XK0F (2.7 - 5.5V), or   (noise?)
- * Sharp GP1UX511QS (5V).   (no noise?)
+ * Panasonic PNA4602M (5V),
+ * Sharp GP1UD261XK0F (2.7 - 5.5V), or
+ * Sharp GP1UX511QS (5V).
  *
- * bare minimum net-list:
- *   at 2313, connect
- *          pin  3 to pin 16  (connects TXD to the "software inverter")
- *          pin 10 to gnd
- *          pin 11 to the output (Vout) lead from IR detector
- *          pin 15 to the RX pin (DB-9 pin 2) of the RS232 serial port
- *          pin 20 to +5
- *          put a .1uf cap between pin 10 and pin 20
+ * refer to the datasheet for you specific
+ * part.  connect a 10uf to 50uf cap between Vcc and gnd, very
+ * close to the detector.
  *
- *   if connecting the activity LED:
- *          pin 9 to to cathode (short lead or flat side) of the LED
- *          connect anode of LED to 400ohm resistor
- *          connect other end of resistor to +5
- *
- *   at IR detector, refer to the datasheet for you specific
- *   part.  connect a 10uf to 50uf cap between Vcc and gnd, very
- *   close to the detector.
- *
- *   for the Panasonic PNA4602M and Sharp GP1UX511QS:
+ * for the Panasonic PNA4602M and Sharp GP1UX511QS:
  *      +---+
  *      | O |   (looking at the front)
  *      |   |
@@ -73,40 +20,8 @@
  *   (Warning!  the Sharp GP1UD261XK0F has Vcc and GND swapped!)
  *
  *
- * the serial ouptput stream is RS232 data at 38400,8N1.  no flow
- * control.  (or 115200 if using crystal)
- *   - in binary (default) mode, we emit the lirc "udp" protocol: 
- *       packets consist of some number of little-endian 16-bit
- *       words.  the high bit signifies whether the received
- *       signal was high or low; the low 15 bits specify the
- *       number of 1/16384-second intervals the signal lasted,
- *       with a minimum value of 1.  since transmit data is buffered,
- *       baud rates slower than the pulse arrival rate are tolerated.
- *       two zero bytes in a row (which can't occur otherwise) are
- *       reserved as an escape mechanism for someday sending other
- *       types of data.
- *   - ascii mode is a simple command/response, for debugging.  requires
- *       max232 or equiv. line driver -- don't connect the RS232 TX
- *       signal directly to your AVR!!!  enable the ability to run
- *       in ascii mode by defining DO_RECEIVE.
- *
- * both LEDs are optional.  Led #1 (pin 9) is somewhat useful --
- * it indicates activity from the IR receiver.  Led #2 is only
- * used for debugging -- don't populate it unless you're sure you
- * need it.
- *
- * to assist in verifying that the data transmit path is okay,
- * the AVR will transmit an endless stream of 'U' characters if
- * pin 7 is grounded while the chip comes out of reset.  (A stream
- * of ascii 'U' characters appears as a square wave when viewed
- * on an oscilloscope.)  the rest of the interrupts are still active,
- * to allow for testing, but normal data transmission is
- * bypassed.
- *
- **********
- *
  * Copyright 2002 Karl Bongers (karl@turbobit.com)
- * Copyright 2007 Paul Fox (pgf@foxharp.boston.ma.us)
+ * Copyright 2007,2013 Paul Fox (pgf@foxharp.boston.ma.us)
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -130,65 +45,12 @@
 #include <avr/wdt.h>
 
 /*
- * fuses:    default for tiny2313: low 0x64 high 0xdf 
- * or, for external crystal, 8Mhz and up, no div by 8, change
- * low to: 0xff
- *    high 0xdb (for brownout at 2.7v)
- *
- * default fuse values work fine
- */
-
-/* personal preference macros/typedefs */
-#define bit(x) _BV(x)
-typedef uint16_t word;
-typedef uint8_t byte;
-
-/* the UART reception code should probably remain off -- it was really only
- * needed for initial debugging.
- */
-#define DO_RECEIVE 0
-
-/*
- * speed selection
- */
-// #define FOSC 3686400		// STK500, ext. clock, for example
-// #define FOSC 7372800		// with crystal, or int. RC w/ OSCCAL recal.
-#define FOSC 8000000		// 38.4Kbaud) (internal osc)
-// #define FOSC 12000000
-// #define FOSC 11059200
-// #define FOSC 14745600
-
-
-/*
  * GPIO usage
  */
-// #define unused	PB0
-// #define unused	PB1
-// #define unused	PB2
-#define TX_INVERT_OUT	PB3
-#define TX_INVERT_IN	PB4
-// #define MOSI_BITNUM	PB5   // pin17, MOSI, input
-// #define MISO_BITNUM	PB6   // pin18, MISO (output)
-// #define SCK_BITNUM	PB7   // pin19, SCK, input
-
-// #define RX_BITNUM	PD0   // pin 1
-// #define TX_BITNUM	PD1   // pin 2
-#define DO_FOX		PD2   // pin 6
-#define DO_DEBUG	PD3   // pin 7, input:  ground to force debug loop
-#define LED2_BITNUM	PD4   // pin 8, output
-#define LED1_BITNUM	PD5   // pin 9, output
-#define IRREC_BITNUM	PD6   // pin 11 -- input:  from IR receiver
+#define IRREC_BITNUM	P?   // input:  from IR receiver
 
 /* hardware access macros */
-#define Led1_Off()	{ PORTD |=	 bit(LED1_BITNUM); }
-#define Led1_On()	{ PORTD &=      ~bit(LED1_BITNUM); }
-#define Led1_Flip()	{ PORTD ^=	 bit(LED1_BITNUM); }
-#define Led2_Off()	{ PORTD |=	 bit(LED2_BITNUM); }
-#define Led2_On()	{ PORTD &=      ~bit(LED2_BITNUM); }
-#define Led2_Flip()	{ PORTD ^=	 bit(LED2_BITNUM); }
 #define IR_high()	(PIND & bit(IRREC_BITNUM))
-#define do_debug()	((PIND & bit(DO_DEBUG)) == 0)
-#define do_fox()	((PIND & bit(DO_FOX)) == 0)
 
 // values for TCCR1B
 #define CLKDIV_8    2
@@ -208,31 +70,8 @@ volatile byte pulse_is_high;
 volatile byte had_overflow;
 
 static prog_char version_s[] = AVRLIRC_VERSION "$Revision: 1.52 $";
-static prog_char fox_s[] = "The Quick Brown Fox Jumped Over the Lazy Dog's Back\r\n";
-
-#if DO_RECEIVE
-static prog_char error_s[] = "try (h)elp";
-static prog_char usage_s[] = "Asc Bin Ir Vers";
-static prog_char ascii_s[] = "ascii";
-static prog_char binary_s[] = "binary";
-static prog_char crnl_s[] = "\r\n";
-volatile byte ascii;
-
-#endif
-
-#define TX_QLEN 64  // NB!  power of 2
-#define TX_QLEN_MASK (TX_QLEN - 1)
-volatile byte tx_r, tx_w;
-volatile byte tx_queue[TX_QLEN];
 
 volatile byte mcusr_mirror;
-
-// verify the crystal freq. config
-#if FOSC != 14745600 && FOSC != 12000000 && \
-    FOSC != 11059200 && FOSC !=  8000000 && \
-    FOSC !=  7372800 && FOSC !=  3686400
-# error unsupported FOSC value
-#endif
 
 /*
  * set up initial chip conditions
@@ -252,11 +91,6 @@ hw_init(void)
 
     // setup outputs
 
-    // port B
-    DDRB = bit(TX_INVERT_OUT);	// just one output bit
-    // PORTB |= bit(TX_INVERT_IN);	// enable pull-up on input
-    PORTB |= bit(TX_INVERT_OUT); // set output high
-
     // port D -- just leds are outputs
     DDRD |= bit(LED1_BITNUM);
     DDRD |= bit(LED2_BITNUM);
@@ -265,50 +99,10 @@ hw_init(void)
     PORTD |= bit(LED2_BITNUM);
     // enable pullup on IR recvr, and on the debug-mode pin
     PORTD |= bit(IRREC_BITNUM);
-    PORTD |= bit(DO_DEBUG);
-    PORTD |= bit(DO_FOX);
-
-    // set up pin-change interrupt for doing inversion on uart TX
-    PCMSK = bit(PCINT4); // enable pin-change for PB4
-    GIMSK = bit(PCIE);  // enable pin-change interrupts
 
     // disable analog comparator -- saves power
     ACSR = bit(ACD);
 
-    // these baud rate divisor values taken from datasheet
-#if FOSC == 14745600
-    UBRRL = 7;		// for 115200 baud at 14.7456Mhz
-#elif FOSC == 12000000
-    UBRRL = 12;		// for 115200 baud at 12Mhz
-    UCSRA |= bit(U2X);	// doubletime
-#elif FOSC == 11059200
-    UBRRL = 5;		// for 115200 baud at 11.0592Mhz
-#elif FOSC == 8000000
-    UBRRL = 12;		// for 38400 baud at 8Mhz
-    // UBRRL = 51;		// for 19200 baud at 8Mhz,
-    // UCSRA |= bit(U2X);	//  needs doubletime
-#elif FOSC == 7372800
-    UBRRL = 3;		// for 115200 baud at 7.3728Mhz, or detuned 8Mz
-#elif FOSC == 3686400
-    UBRRL = 1;		// for 115200 baud at 3.6864Mhz
-#endif
-    // (UBRRH = 0;)			    // default poweron value
-
-    // enable rx and tx uart functions.  tx interrupt gets enabled on demand.
-    UCSRB = bit(TXEN);
-#if DO_RECEIVE
-    // enable rx interrupt.
-    UCSRB |= bit(RXEN) | bit(RXCIE);
-#endif
-
-    // two stop bits -- only one would be faster, but the with repeated
-    //  data streams, it's possible for the receiver to lock onto a
-    //  stop/start transition in the middle of a byte, and then stay
-    //  out os sync for a while.
-    UCSRC |= bit(USBS);
-
-    // set 8 bits, no parity, 1 stop bit
-    // (UCSRC = bit(UCSZ0) | bit(UCSZ1);)	// default poweron value
     // (TCCR1A = 0;)				// default poweron value
     TCCR1B = bit(ICNC1) | CLKDIV_256;	// see comments at emit_pulse_data()
     // timer1 overflow int enable, and input capture event int enable.
@@ -319,124 +113,6 @@ hw_init(void)
     // second for all the "interesting" clock rates (see comments
     // at emit_pulse_data(), below
     OCR1A = 3000;
-
-    // (set_sleep_mode(SLEEP_MODE_IDLE);)   // default poweron value
-
-}
-
-/*
- * delay - wait a bit
- */
-void
-delay(word dly)
-{
-    volatile word i;
-    volatile byte j;
-
-    for (i = dly; i != 0; i--)
-	for (j = 255; j != 0; j--)
-	    /* nothing */;
-}
-
-/*
- * wiggling light pattern, to show life at startup.  very useful
- * for visually detecting watchdog or crash.
- */
-void
-blinky(void)
-{
-    byte i;
-    for (i = 0; i < 6; i++) {
-	delay(1000);
-	if (i & 1) {
-	    Led1_Off();
-	} else {
-	    Led1_On();
-	}
-    }
-}
-
-/*
- * tx_char - send a serial character
- */
-void
-tx_char(byte t)
-{
-    byte tmp;
-
-    tmp = (tx_w + 1) & TX_QLEN_MASK;
-
-#define WAIT_FOR_TX_SPACE 1 // tx_char() only called with ints enabled
-#if WAIT_FOR_TX_SPACE
-    // if we were to call tx_char() with interrupts disabled,
-    // this condition will never be met.  in that case, we could
-    // probably still make it work, but it's probably not worth
-    // it.
-    while (tmp == tx_r)
-	/* spin for freespace */;
-#else
-    if (tmp == tx_r) {
-	return;  // drop character
-    }
-#endif
-
-    tx_queue[tmp] = t;
-    tx_w = tmp;
-
-    UCSRB |= bit(UDRIE);
-}
-
-#if DO_RECEIVE
-/*
- * tx_char_hex - send a serial nibble, in ascii hex
- */
-void
-tx_char_hex(byte t)
-{
-    if (t <= 9)
-	tx_char(t + '0');
-    else
-	tx_char(t + 'a' - 10);
-
-}
-
-/*
- *  tx_hexword - send up to a word as hex
- */
-void
-tx_hexword(word v)
-{
-    tx_char_hex((v >> 12) & 0xf);
-    tx_char_hex((v >>  8) & 0xf);
-    tx_char_hex((v >>  4) & 0xf);
-    tx_char_hex((v >>  0) & 0xf);
-}
-#endif
-
-void
-tx_str_p(const prog_char *s)
-{
-    char c;
-
-    while ( (c = pgm_read_byte(s++)) )
-	tx_char(c);
-}
-
-/*
- * tx_word - send 16 bits, little-endian, optionally in ascii
- */
-void
-tx_word(word t)
-{
-#if DO_RECEIVE
-    if (ascii) {
-	tx_hexword(t);
-	tx_str_p(crnl_s);
-	return;
-    }
-#endif
-    tx_char(t & 0xff);
-    tx_char((t >> 8) & 0xff);
 }
 
 
@@ -498,23 +174,6 @@ INTERRUPTIBLE_ISR(TIMER1_CAPT_vect)
 }
 
 /*
- * uart transmit interrupt handler.
- */
-ISR(USART_UDRE_vect)
-{
-    // disable uart interrupt, so we can reenable interrupts in general
-    UCSRB &= ~bit(UDRIE);
-    sei();
-
-    // if data in queue, send it, and reenable the interrupt
-    if (tx_r != tx_w) {
-	tx_r = (tx_r + 1) & TX_QLEN_MASK;
-	UDR = tx_queue[tx_r];
-	UCSRB |= bit(UDRIE);
-    }
-}
-
-/*
  * pc_int - pin change interrupt.
  * this is purely and simply an inversion function -- we want to
  * present an inverted copy of the USART's TX output to the host's
@@ -531,51 +190,6 @@ ISR(PCINT_vect)
 }
 
 
-#if DO_RECEIVE
-/*
- * uart_rx - Uart Rx interrupt handler.
- * this command-line interface was used early in development.
- */
-ISR(USART_RX_vect)
-{
-    byte c;
-
-    Led2_Flip();
-
-    c = UDR;
-
-    switch (c) {
-    case 'h':
-	tx_str_p(usage_s);
-	break;
-    case 'a':
-	ascii = 1;
-	tx_str_p(ascii_s);
-	break;
-	;;
-    case 'b':
-	ascii = 0;
-	tx_str_p(binary_s);
-	break;
-    case 'B':		// silent
-	ascii = 0;
-	return;
-    case 'i':
-	tx_char(IR_high() ? '1':'0');
-	break;
-    case 'm':
-	tx_hexword(mcusr_mirror);	/* reset reason, etc */
-	break;
-    case 'v':
-	tx_str_p(version_s);	/* version */
-	break;
-    default:
-	tx_str_p(error_s);
-	break;
-    }
-    tx_str_p(crnl_s);
-}
-#endif
 
 /*
  *  we want the timer overflow to be (a lot) longer than the
@@ -670,23 +284,6 @@ main(void)
     wdt_enable(WDTO_4S);
 
     sei();
-
-    if (do_debug() || do_fox()) {
-	/* enter a loop transmitting.  a perfect square wave is useful
-	 * for debugging the TX inversion, and baud rate stability, and
-	 * the quick brown fox message is good for data integrity.
-	 */
-	for(;;) {
-	    wdt_reset();
-	    if (do_fox()) {
-		tx_str_p(version_s);
-		tx_str_p(fox_s);
-	    } else {
-		tx_char('U');
-	    }
-	}
-	/* not reached */
-    }
 
     for(;;) {
 	wdt_reset();

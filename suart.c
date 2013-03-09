@@ -27,7 +27,6 @@
 
 #define BIT_TIME	(unsigned int)((F_CPU + BAUD/2) / BAUD)
 
-
 volatile unsigned char stx_count;
 unsigned char stx_data;
 
@@ -81,6 +80,14 @@ unsigned char getch(void)	// get byte
 }
 
 
+// check if the received bit is high
+#if RX_INVERT
+#define SRX_HIGH(x) (((x) & bit(SRX)) == 0)
+#else
+#define SRX_HIGH(x) ((x) & bit(SRX)) 
+#endif
+
+
 #if RX_USE_INPUT_CAPTURE_INT
 ISR(TIMER1_CAPT_vect)		// rx start
 #else
@@ -98,11 +105,8 @@ ISR(INT0_vect)		// rx start
 	srx_tmp = 0;				// clear bit storage
 	srx_mask = 1;				// bit mask
 	STIFR = bit(OCF1B);			// clear pending interrupt
-#if RX_INVERT
-	if (SRXPIN & bit(SRX))		// still high
-#else
-	if (!(SRXPIN & bit(SRX)))	// still low
-#endif
+
+	if (!SRX_HIGH(SRXPIN))		// still low (i.e., start bit)
 		STIMSK = bit(OCIE1B);	// wait for first bit
 }
 
@@ -113,11 +117,7 @@ ISR(TIMER1_COMPB_vect)
 
 	if (srx_mask) {
 		OCR1B += BIT_TIME;		// next bit slice
-#if RX_INVERT
-		if (!(in & bit(SRX)))
-#else
-		if (in & bit(SRX))
-#endif
+		if (SRX_HIGH(in))
 			srx_tmp |= srx_mask;
 		srx_mask <<= 1;
 	} else {
@@ -149,6 +149,16 @@ void putch(char val)		// send byte
 }
 
 
+// search for "Table 12-8.  Compare Output Mode, Normal Mode
+// (non-PWM)" or something similar in the datasheet to see
+// what's happening here.
+#if TX_INVERT
+#define SET_TX_LOW_NEXT (bit(COM1A1)|bit(COM1A0))	// set high
+#define SET_TX_HIGH_NEXT (bit(COM1A1))			// set low
+#else
+#define SET_TX_LOW_NEXT (bit(COM1A1))			// set low
+#define SET_TX_HIGH_NEXT (bit(COM1A1)|bit(COM1A0))	// set high
+#endif
 
 ISR(TIMER1_COMPA_vect)	// tx bit
 {
@@ -159,24 +169,12 @@ ISR(TIMER1_COMPA_vect)	// tx bit
 
 	count = stx_count;
 
-	// search for "Table 12-8.  Compare Output Mode, Normal Mode
-	// (non-PWM)" or something similar in the datasheet to see
-	// what's happening here.
-
 	if (count) {
 		stx_count = --count;	// count down
-#if TX_INVERT
-		dout = bit(COM1A1)|bit(COM1A0);	// set high on next compare
-#else
-		dout = bit(COM1A1);		// set low on next compare
-#endif
+		dout = SET_TX_LOW_NEXT;
 		if (count != 9) {		// no start bit
 			if (!(stx_data & 1))	// test inverted data
-#if TX_INVERT
-				dout = bit(COM1A1);	// set low on next compare
-#else
-				dout = bit(COM1A1)|bit(COM1A0);	// set high on next compare
-#endif
+				dout = SET_TX_HIGH_NEXT;
 			stx_data >>= 1;		// shift zero in from left
 		}
 		TCCR1A = dout;

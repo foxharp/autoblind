@@ -9,6 +9,7 @@ pin restrictions:
     bootloader uses PA2?
 
     PB0, PB1, PB2, and PB7 (reset) are used during programming.
+    PB0 and PB1 are the LEDs
 
     that leaves PB3, PB4, PB5, PA0, PA1, PA3 - PA7
 

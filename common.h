@@ -14,6 +14,9 @@
 // #define  BAUD    4800
 #define	BAUD	4800
 
+/* personal preference macros/typedefs */
+typedef uint16_t word;
+typedef uint8_t byte;
 #define bit(x) _BV(x)
 
 void monitor(void);

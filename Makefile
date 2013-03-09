@@ -21,8 +21,10 @@ OBJS = $(subst .c,.o,$(SRCS))
 
 # current code assumes ATTiny861.
 MCU = attiny861
-# device is shipped at 1Mhz.  if you play with the pre-scaler, change this.
-F_CPU = 1000000
+# the device is shipped at 1Mhz.
+# this setting assumes you change the fuse, or change the prescaler
+# early on.
+F_CPU = 8000000
 
 # location of cross-compiler -- edit to suit
 #CROSS = /opt/avr-gcc-070314/bin/avr-

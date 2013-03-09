@@ -17,11 +17,20 @@
 #include "timer.h"
 #include "util.h"
 
+volatile byte mcusr_mirror;
+
 void hardware_setup(void)
 {
-	/* Disable watchdog if enabled by bootloader/fuses */
-	MCUSR &= ~(1 << WDRF);
+	mcusr_mirror = MCUSR;
+	MCUSR = 0;
 	wdt_disable();
+
+	// eliminate div-by-8 (no-op if 'div by 8' clock fuse not programmed)
+	CLKPR = bit(CLKPCE);
+	CLKPR = 0;
+
+	// disable analog comparator -- saves power
+	ACSRA = bit(ACD);
 
 	init_timer();
 	suart_init();

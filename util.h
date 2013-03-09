@@ -21,6 +21,9 @@ void init_led(void);
 void led_handle(void);
 void led_flash(void);
 
+void blinky(void);
+void do_debug_out(void);
+
 void util_init(void);
 
 #define p_hex(n) do { putstr(#n " = 0x"); puthex16(n); putstr(" ");  } while(0)

@@ -45,14 +45,17 @@ int main()
 
 	hardware_setup();
 
+	wdt_enable(WDTO_4S);
+
 	sei();
 
 	while (1) {
+		wdt_reset();
 #ifndef NO_MONITOR
 		monitor();
 #endif
 		led_handle();
-		// process();
+		ir_process();
 	}
 
 }

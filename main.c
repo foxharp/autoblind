@@ -32,6 +32,8 @@ int main()
 	util_init();
 	blinky();
 
+	do_debug_out();
+
 	hardware_setup();
 
 	sei();

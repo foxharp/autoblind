@@ -19,6 +19,8 @@ pin choices:
     MOTOR_TURN
     LIMIT
 
+    DEBUG
+
 
 
 6-pin connector to motor

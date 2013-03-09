@@ -10,6 +10,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
+#include <avr/wdt.h>
 #include "suart.h"
 #include "timer.h"
 #include "common.h"
@@ -141,6 +142,33 @@ blinky(void)
 	}
     }
 }
+
+#define PINDEBUG PINA
+#define DEBUG PA5
+#define do_fox()	((PINDEBUG & bit(DEBUG)) == 0)
+static prog_char fox_s[] = "The Quick Brown Fox Jumped Over"
+				" the Lazy Dog's Back\r\n";
+
+void
+do_debug_out(void)
+{
+    if (do_fox()) {
+	/* a perfect square wave is useful for debugging the TX
+	 * inversion, and baud rate stability, and the quick brown fox
+	 * message is good for data integrity.
+	 */
+	char i;
+	for(i = 0; i < 5; i++) {
+	    wdt_reset();
+	    putstr_p(fox_s);
+	}
+	for(;;) {
+	    putch('U');
+	}
+	/* not reached */
+    }
+}
+
 
 void
 util_init(void)

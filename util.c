@@ -27,14 +27,6 @@ stdio_putchar(char c, FILE *stream)
 	putch(c);
 	return 0;
 }
-
-void
-util_init(void)
-{
-	stdout = &mystdout;
-}
-#else
-void util_init(void) {}
 #endif
 
 void puthex(unsigned char i)
@@ -92,9 +84,14 @@ void putstr_p(const prog_char * s)
 
 
 # define PORTLED PORTB
-# define BITLED PB6
+# define BITLED PB0
 # define DDRLED DDRB
-time_t led_time;
+
+#define Led1_Off()	{ PORTLED |=  bit(BITLED); }
+#define Led1_On()	{ PORTLED &= ~bit(BITLED); }
+#define Led1_is_On()	( PORTLED  &  bit(BITLED) )
+
+static time_t led_time;
 
 void init_led(void)
 {
@@ -103,13 +100,54 @@ void init_led(void)
 
 void led_handle(void)
 {
-	if ((PORTLED & bit(BITLED)) && check_timer(led_time, 100))
-		PORTLED &= ~bit(BITLED);
+	if (Led1_is_On() && check_timer(led_time, 100))
+		Led1_Off();
 }
 
 void led_flash(void)
 {
-	PORTLED |= bit(BITLED);
+	Led1_On();
 	led_time = get_ms_timer();
+}
+
+/*
+ * delay - wait a bit
+ */
+void
+delay(word dly)
+{
+    volatile word i;
+    volatile byte j;
+
+    for (i = dly; i != 0; i--)
+	for (j = 255; j != 0; j--)
+	    /* nothing */;
+}
+
+/*
+ * wiggling light pattern, to show life at startup.
+ * useful for visually detecting watchdog or crash.
+ */
+void
+blinky(void)
+{
+    byte i;
+    for (i = 0; i < 6; i++) {
+	delay(1000);
+	if (i & 1) {
+	    Led1_Off();
+	} else {
+	    Led1_On();
+	}
+    }
+}
+
+void
+util_init(void)
+{
+#ifdef USE_PRINTF
+	stdout = &mystdout;
+#endif
+	init_led();
 }
 

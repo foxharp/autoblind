@@ -29,6 +29,9 @@ void hardware_setup(void)
 
 int main()
 {
+	util_init();
+	blinky();
+
 	hardware_setup();
 
 	sei();

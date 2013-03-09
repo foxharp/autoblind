@@ -1,7 +1,30 @@
 
 pin restrictions:
 
-    IR needs to be on an input capture pin:  PA4 on attiny861
+    IR_IN needs to be on an input capture pin:  PA4 on attiny861
 
-    RX serial needs to be on INT0:  PB6 on attiny861
-    TX serial needs to be on OC1A:  PB1 on attiny861
+    SUART_RX serial needs to be on INT0:  PB6 on attiny861
+    SUART_TX serial needs to be on OC1A:  PB1 on attiny861
+
+    bootloader uses PA2?
+
+    PB0, PB1, PB2, and PB7 (reset) are used during programming.
+
+    that leaves PB3, PB4, PB5, PA0, PA1, PA3 - PA7
+
+pin choices:
+    MOTOR_ON
+    MOTOR_DIR
+    MOTOR_TURN
+    LIMIT
+
+
+
+6-pin connector to motor
+
+            +5 (AREF)   jumper to nearest pad of USB jack
+            GND
+   MOTOR_ON
+   MOTOR_DIR
+            NC (PB6)
+   MOTOR_ROT

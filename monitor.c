@@ -18,6 +18,7 @@
 #include "timer.h"
 #include "common.h"
 #include "suart.h"
+#include "ir.h"
 #include "util.h"
 #ifdef USE_PRINTF
 #include <stdio.h>

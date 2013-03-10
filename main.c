@@ -15,6 +15,7 @@
 #include "suart.h"
 #include "common.h"
 #include "timer.h"
+#include "ir.h"
 #include "util.h"
 
 volatile byte mcusr_mirror;

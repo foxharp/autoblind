@@ -161,6 +161,10 @@ void monitor(void)
 	}
 		break;
 #endif
+	case 'i':
+		ir_show_code();
+		break;
+
 	case 't':
 		{
 		static const char *teststring = "foobar";
@@ -195,6 +199,7 @@ void monitor(void)
 		for (;;);
 		break;
 
+#if LATER
 	case 'B':
 		// yanks the h/w reset line (jumpered to PB1), which
 		// takes us to the bootloader.
@@ -202,6 +207,7 @@ void monitor(void)
 		PORTB &= ~bit(PB1);
 		for (;;);
 		break;
+#endif
 
 	case 'w':
 		addr = gethex();

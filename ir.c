@@ -65,6 +65,9 @@ volatile byte had_overflow;
 
 #define MAX_PULSES 16
 word ir_pulse[MAX_PULSES + 1];  // there's a header on the front
+word ir_code;
+byte ir_i;
+
 
 
 /*
@@ -168,9 +171,6 @@ INTERRUPTIBLE_ISR(TIMER0_CAPT_vect)
 
 #define pulse_ms(ms) ((16384 * ms) / 1000) // convert ms to 16384'ths
 
-word ir_code;
-byte ir_i;
-
 void
 ir_process(void)
 {
@@ -232,3 +232,14 @@ ir_process(void)
     }
 }
 
+void ir_show_code(void)
+{
+    byte i;
+
+    p_hex(ir_code);
+
+    for (i = 0; i < MAX_PULSES; i++) {
+	putdec16(i); putstr("  ");
+	p_dec(ir_pulse[i]);
+    }
+}

@@ -26,7 +26,9 @@ void do_debug_out(void);
 
 void util_init(void);
 
-#define p_hex(n) do { putstr(#n " = 0x"); puthex16(n); putstr(" ");  } while(0)
-#define p_dec(n) do { putstr(#n " = ");   putdec16(n); putstr(" ");  } while(0)
+// these output both names and values.  i.e.,
+// p_hex(foo)  results in  "foo = 0x1234"
+#define p_hex(n) do { putstr(#n " = 0x"); puthex16(n); putstr("  "); } while(0)
+#define p_dec(n) do { putstr(#n " = ");   putdec16(n); putstr("  "); } while(0)
 #define p_str(s) do { putstr(#s " = '");  putstr(s);   putstr("' "); } while(0)
 #define crnl()	putch('\n');

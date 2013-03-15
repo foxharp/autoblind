@@ -89,6 +89,9 @@ tarball: all clean
 	mv ../xostick-$(VERSION).tar.gz .
 	rm -f ../xostick-$(VERSION)
 
+program:
+	sudo avrdude -c usbtiny -p t861 -U $(PROG).hex
+
 clean:
 	rm -f *.o *.flash *.flash.* *.out *.map *.lst *.lss
 	

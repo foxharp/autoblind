@@ -33,18 +33,18 @@ void hardware_setup(void)
 	// disable analog comparator -- saves power
 	ACSRA = bit(ACD);
 
+	util_init();
 	init_timer();
 	suart_init();
 }
 
 int main()
 {
-	util_init();
+	init_led();
 	blinky();
 
-	do_debug_out();
-
 	hardware_setup();
+	do_debug_out();
 
 	wdt_enable(WDTO_4S);
 

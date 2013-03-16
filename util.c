@@ -88,8 +88,8 @@ void putstr_p(const prog_char * s)
 # define BITLED PB0
 # define DDRLED DDRB
 
-#define Led1_Off()	{ PORTLED |=  bit(BITLED); }
-#define Led1_On()	{ PORTLED &= ~bit(BITLED); }
+#define Led1_Off()	do { PORTLED |=  bit(BITLED); } while(0)
+#define Led1_On()	do { PORTLED &= ~bit(BITLED); } while(0)
 #define Led1_is_On()	( PORTLED  &  bit(BITLED) )
 
 static time_t led_time;
@@ -109,6 +109,10 @@ void led_flash(void)
 {
 	Led1_On();
 	led_time = get_ms_timer();
+	//if (Led1_is_On())
+	//	Led1_Off();
+	//else
+	//	Led1_On();
 }
 
 /*
@@ -133,19 +137,19 @@ void
 blinky(void)
 {
     byte i;
-    for (i = 0; i < 6; i++) {
-	delay(1000);
+    for (i = 0; i < 12; i++) {
 	if (i & 1) {
 	    Led1_Off();
 	} else {
 	    Led1_On();
 	}
+	delay(1000);
     }
 }
 
 #define PINDEBUG PINA
-#define DEBUG PA5
-#define do_fox()	((PINDEBUG & bit(DEBUG)) == 0)
+#define PDEBUG PA5
+#define do_fox()	((PINDEBUG & bit(PDEBUG)) == 0)
 static prog_char fox_s[] = "The Quick Brown Fox Jumped Over"
 				" the Lazy Dog's Back\r\n";
 
@@ -176,6 +180,5 @@ util_init(void)
 #ifdef USE_PRINTF
 	stdout = &mystdout;
 #endif
-	init_led();
 }
 

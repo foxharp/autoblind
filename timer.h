@@ -21,15 +21,15 @@ void short_delay(unsigned int n);  // try not to call this.  use usec_delay()
 #define usecs_to_loops(u) ((100*(long)(u))/usecs_per_100_loops)
 #define usec_delay(usecs) short_delay(usecs_to_loops(usecs)+1)
 
-#define timer10bit_write(reg, val) {	\
-	wtmp = val;			\
-	TC1H = (wtmp >> 8) & 0x03;	\
-	reg = wtmp & 0xff;		\
+#define t1write10(reg, val) {	\
+	w10tmp = val;			\
+	TC1H = (w10tmp >> 8) & 0x03;	\
+	reg = w10tmp & 0xff;		\
     }
 
-#define timer10bit_read(reg) (rtmp = (TC1H << 8), rtmp + (reg & 0xff))
+#define t1read10(reg) (r10tmp = (reg & 0xff), r10tmp | (TC1H << 8))
 
-#define timer10bit_add(reg, incr) {	\
+#define t1add10(reg, incr) {	\
 	unsigned int next;		\
 	next = reg;			\
 	next |= (TC1H << 8);		\

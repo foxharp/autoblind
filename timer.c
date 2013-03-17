@@ -1,5 +1,6 @@
 /* vi: set sw=4 ts=4: */
 /*
+ * Copyright (C) 2010 One Laptop per Child
  * Copyright (c) 2011 Paul Fox, pgf@foxharp.boston.ma.us
  *
  * Licensed under GPL version 2, see accompanying LICENSE file for details.
@@ -40,8 +41,9 @@ void print_tstamp(void) {}
 
 void init_timer(void)
 {
-	// set up for simple overflow operation
-	TCCR1A = 0;		// normal
+	int w10tmp;
+
+	TCCR1A = 0;		// normal port operation
 
 	// the counter runs at a microsecond per tick
 #if F_CPU == 1000000
@@ -49,9 +51,11 @@ void init_timer(void)
 #elif F_CPU == 8000000
 	TCCR1B = bit(CS12);   // prescaler is 8
 #endif
+	// TOP value -- all ones
+	t1write10(OCR1C, 0x3ff);
+
 	// 1000 usec per msec
-	TC1H = (1000 >> 8) & 0xff;
-	OCR1D = 1000 & 0xff;
+	t1write10(OCR1D, 1000);
 
 	TIMSK |= bit(OCIE1D);
 
@@ -61,11 +65,11 @@ ISR(TIMER1_COMPD_vect)
 {
 	milliseconds++;
 
-	if (milliseconds % 1000 == 0) {
+	if ((milliseconds % 1000) == 0) {
 		led_flash();
 	}
 
-	timer10bit_add(OCR1D, 1000);
+	t1add10(OCR1D, 1000);
 }
 
 time_t get_ms_timer(void)

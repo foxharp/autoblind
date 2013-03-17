@@ -31,8 +31,6 @@
 
 #define BANNER PROGRAM_VERSION "\n"
 
-#define QUICKFOX "The Quick Brown Fox Jumps Over The Lazy Dog\n"
-
 #ifndef NO_MONITOR
 #ifndef MINIMAL_MONITOR
 
@@ -66,7 +64,6 @@ static char getline(void)
 	if (c == '\r' || c == '\n') {
 		// done
 		putch('\n');
-		putch('\r');
 		return 1;
 	}
 
@@ -133,7 +130,7 @@ void monitor(void)
 	case '\0':
 		break;
 
-#if 1
+#if 0
 	case 'D':  // calibrate the delay timer
 	{
 		int i;
@@ -152,13 +149,15 @@ void monitor(void)
 		now = get_ms_timer();
 		puthex32(now - then); // ms/100000, or us/100 loops
 		putstr(" usec/100 loops\n");
+		crnl();
 
 		then = get_ms_timer();
 		for (i = 0; i < 1000; i++)
 			usec_delay(1000);
 		now = get_ms_timer();
 		puthex32(now - then);
-		putstr(" should be 1000 ms\n");
+		putstr(" should be 1000 (0x3e8) ms\n");
+		crnl();
 	}
 		break;
 #endif
@@ -248,6 +247,7 @@ void monitor(void)
 
 	default:
 		putch('?');
+		crnl();
 	}
 
 	prompt();

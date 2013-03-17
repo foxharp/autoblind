@@ -10,9 +10,8 @@
 #endif
 
 // #define  BAUD    38400
-// #define  BAUD    9600
+#define  BAUD    9600
 // #define  BAUD    4800
-#define	BAUD	4800
 
 /* personal preference macros/typedefs */
 typedef uint16_t word;

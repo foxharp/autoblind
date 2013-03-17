@@ -17,19 +17,19 @@
 
 #ifndef NO_MSTIMER
 
-time_t milliseconds;
+long milliseconds;
 
 #define PRINT_TSTAMPS 1
 #if PRINT_TSTAMPS
 void print_tstamp(void)
 {
-        unsigned long tval;
+        long tval;
 
         do
         {
-                tval = (unsigned long)milliseconds;
+                tval = milliseconds;
         }
-        while (tval != (unsigned long)milliseconds);
+        while (tval != milliseconds);
 
         // printf("%lu:",tval);
 	puthex32(tval); putch(':');
@@ -63,18 +63,19 @@ void init_timer(void)
 
 ISR(TIMER1_COMPD_vect)
 {
+	t1add10(OCR1D, 1000);
+
 	milliseconds++;
 
 	if ((milliseconds % 1000) == 0) {
 		led_flash();
 	}
 
-	t1add10(OCR1D, 1000);
 }
 
-time_t get_ms_timer(void)
+long get_ms_timer(void)
 {
-	time_t ms;
+	long ms;
 	char sreg;
 
 	sreg = SREG;
@@ -87,7 +88,7 @@ time_t get_ms_timer(void)
 	return ms;
 }
 
-unsigned char check_timer(time_t base, int duration)
+unsigned char check_timer(long base, int duration)
 {
 	return get_ms_timer() > (base + duration);
 }

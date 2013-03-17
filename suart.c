@@ -25,7 +25,8 @@
 
 #define bit(x) _BV(x)
 
-#define BIT_TIME	(unsigned int)((F_CPU + BAUD/2) / BAUD)
+// timer running at 1Mhz
+#define BIT_TIME	(unsigned int)((1000000 + BAUD/2) / BAUD)
 
 volatile unsigned char stx_count;
 unsigned char stx_data;

@@ -36,6 +36,7 @@ void hardware_setup(void)
 	util_init();
 	init_timer();
 	suart_init();
+	init_debug();
 }
 
 int main()
@@ -44,11 +45,12 @@ int main()
 	blinky();
 
 	hardware_setup();
+	sei();
+
 	do_debug_out();
 
 	wdt_enable(WDTO_4S);
 
-	sei();
 
 	while (1) {
 		wdt_reset();
@@ -56,7 +58,7 @@ int main()
 		monitor();
 #endif
 		led_handle();
-		ir_process();
+//		ir_process();
 	}
 
 }

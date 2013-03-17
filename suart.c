@@ -41,11 +41,11 @@ unsigned char srx_tmp;
 
 void suart_init(void)
 {
-	int r10tmp,w10tmp;
+	int w10tmp;
 	// timer_init has already configured the rate
 
 	// OCR1A = TCNT1 + 1;			// force first compare
-	t1write10(OCR1A, t1read10(TCNT1) + 1);
+	t1write10(OCR1A, t1read10_TCNT1() + 1);
 	TCCR1A = bit(COM1A1) | bit(COM1A0);	// set OC1A high, T1 mode 0
 
 	STIMSK |= bit(OCIE1A);			// enable tx
@@ -66,7 +66,7 @@ void suart_init(void)
 # else
 	MCUCR = bit(ISC01);	// falling edge on INT0 (and INT1)
 	GIFR = bit(INTF0);	// clear pending interrupt
-	GIMSK = bit(INT0);	// enable rx and wait for start bit
+	GIMSK |= bit(INT0);	// enable rx and wait for start bit
 # endif
 
 	srx_done = 0;				// nothing received
@@ -97,22 +97,25 @@ ISR(TIMER1_CAPT_vect)		// rx start
 ISR(INT0_vect)		// rx start
 #endif
 {
-	int r10tmp, w10tmp;
+	int w10tmp;
 	// scan 1.5 bits after start
 #if RX_USE_INPUT_CAPTURE_INT
-	t1write10(OCR1B, t1read10(ICR1) + (unsigned int) (3 * BIT_TIME / 2));
+	t1write10(OCR1B, t1read10_ICR1() + (unsigned int) (3 * BIT_TIME / 2));
 #else
 	GIMSK &= ~bit(INT0);
 	
-	t1write10(OCR1B, (t1read10(TCNT1) + (unsigned int) (3 * BIT_TIME / 2)));
+	t1write10(OCR1B, (t1read10_TCNT1() + (unsigned int) (3 * BIT_TIME / 2)));
 #endif
 
 	srx_tmp = 0;				// clear bit storage
 	srx_mask = 1;				// bit mask
 	STIFR = bit(OCF1B);			// clear pending interrupt
 
-	if (!SRX_HIGH(SRXPIN))		// still low (i.e., start bit)
-		STIMSK = bit(OCIE1B);	// wait for first bit
+	if (!SRX_HIGH(SRXPIN)) {		// still low (i.e., start bit)
+		STIMSK &= ~bit(OCIE1A);	// disable tx
+		STIMSK |= bit(OCIE1B);	// wait for first bit
+	}
+
 }
 
 
@@ -128,13 +131,15 @@ ISR(TIMER1_COMPB_vect)
 	} else {
 		srx_done = 1;			// mark rx data valid
 		srx_data = srx_tmp;		// store rx data
-		STIMSK = bit(OCIE1A);		// enable tx
+		STIMSK &= ~bit(OCIE1B);		// disable rx bit timer
+		STIMSK |= bit(OCIE1A);		// enable tx
+		// STIMSK = bit(OCIE1A);		// enable tx
 #if RX_USE_INPUT_CAPTURE_INT
 		STIFR = bit(ICF1);		// clear pending interrupt
 		STIMSK |= bit(ICIE1)		// enable rx
 #else
 		GIFR = bit(INTF0);		// clear pending interrupt
-		GIMSK = bit(INT0);		// enable rx
+		GIMSK |= bit(INT0);		// enable rx
 #endif
 	}
 }

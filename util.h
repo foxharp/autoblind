@@ -22,7 +22,15 @@ void led_handle(void);
 void led_flash(void);
 
 void blinky(void);
+
+#define PORTDEBUG PORTA
+#define PINDEBUG PINA
+#define PDEBUG PA5
+#define init_debug() {PORTDEBUG |= bit(PDEBUG);} // enable pullup
+#define do_fox()	((PINDEBUG & bit(PDEBUG)) == 0)
+#define QUICKFOX "The Quick Brown Fox Jumps Over The Lazy Dog\n"
 void do_debug_out(void);
+
 
 void util_init(void);
 

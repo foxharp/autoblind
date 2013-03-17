@@ -13,6 +13,7 @@
 #include <avr/wdt.h>
 #include "suart.h"
 #include "timer.h"
+#include "util.h"
 #include "common.h"
 
 #ifdef USE_PRINTF
@@ -84,15 +85,16 @@ void putstr_p(const prog_char * s)
 }
 
 
-# define PORTLED PORTB
-# define BITLED PB0
 # define DDRLED DDRB
+# define PORTLED PORTB
+# define PINLED PINB
+# define BITLED PB0
 
-#define Led1_Off()	do { PORTLED |=  bit(BITLED); } while(0)
-#define Led1_On()	do { PORTLED &= ~bit(BITLED); } while(0)
-#define Led1_is_On()	( PORTLED  &  bit(BITLED) )
+#define Led1_On()	do { PORTLED |=  bit(BITLED); } while(0)
+#define Led1_Off()	do { PORTLED &= ~bit(BITLED); } while(0)
+#define Led1_is_On()	   ( PINLED  &   bit(BITLED) )
 
-static time_t led_time;
+static long led_time;
 
 void init_led(void)
 {
@@ -101,18 +103,25 @@ void init_led(void)
 
 void led_handle(void)
 {
-	if (Led1_is_On() && check_timer(led_time, 100))
+	if (led_time && Led1_is_On() && check_timer(led_time, 100)) {
 		Led1_Off();
+		led_time = 0;
+	}
 }
 
 void led_flash(void)
 {
 	Led1_On();
 	led_time = get_ms_timer();
-	//if (Led1_is_On())
-	//	Led1_Off();
-	//else
-	//	Led1_On();
+	return;
+	/*
+	static int i;
+	// if (Led1_is_On())
+	if (i++ & 1)
+		Led1_Off();
+	else
+		Led1_On();
+		*/
 }
 
 /*
@@ -143,29 +152,16 @@ blinky(void)
 	} else {
 	    Led1_On();
 	}
-	delay(1000);
+	delay(100);
     }
 }
-
-#define PINDEBUG PINA
-#define PDEBUG PA5
-#define do_fox()	((PINDEBUG & bit(PDEBUG)) == 0)
-static prog_char fox_s[] = "The Quick Brown Fox Jumped Over"
-				" the Lazy Dog's Back\r\n";
 
 void
 do_debug_out(void)
 {
     if (do_fox()) {
-	/* a perfect square wave is useful for debugging the TX
-	 * inversion, and baud rate stability, and the quick brown fox
-	 * message is good for data integrity.
+	/* a perfect square wave is useful for debugging baud rate issues
 	 */
-	char i;
-	for(i = 0; i < 5; i++) {
-	    wdt_reset();
-	    putstr_p(fox_s);
-	}
 	for(;;) {
 	    putch('U');
 	}

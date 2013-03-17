@@ -40,9 +40,11 @@ unsigned char srx_tmp;
 
 void suart_init(void)
 {
+	int r10tmp,w10tmp;
 	// timer_init has already configured the rate
 
-	OCR1A = TCNT1 + 1;			// force first compare
+	// OCR1A = TCNT1 + 1;			// force first compare
+	t1write10(OCR1A, t1read10(TCNT1) + 1);
 	TCCR1A = bit(COM1A1) | bit(COM1A0);	// set OC1A high, T1 mode 0
 
 	STIMSK |= bit(OCIE1A);			// enable tx
@@ -94,12 +96,14 @@ ISR(TIMER1_CAPT_vect)		// rx start
 ISR(INT0_vect)		// rx start
 #endif
 {
+	int r10tmp, w10tmp;
 	// scan 1.5 bits after start
 #if RX_USE_INPUT_CAPTURE_INT
-	OCR1B = ICR1 + (unsigned int) (3 * BIT_TIME / 2);
+	t1write10(OCR1B, t1read10(ICR1) + (unsigned int) (3 * BIT_TIME / 2));
 #else
 	GIMSK &= ~bit(INT0);
-	OCR1B = TCNT1 + (unsigned int) (3 * BIT_TIME / 2);
+	
+	t1write10(OCR1B, (t1read10(TCNT1) + (unsigned int) (3 * BIT_TIME / 2)));
 #endif
 
 	srx_tmp = 0;				// clear bit storage
@@ -116,7 +120,7 @@ ISR(TIMER1_COMPB_vect)
 	unsigned char in = SRXPIN;	// scan rx line
 
 	if (srx_mask) {
-		OCR1B += BIT_TIME;		// next bit slice
+		t1add10(OCR1B, BIT_TIME);	// next bit slice
 		if (SRX_HIGH(in))
 			srx_tmp |= srx_mask;
 		srx_mask <<= 1;
@@ -144,6 +148,8 @@ void putch(char val)		// send byte
 	while (stx_count)	// until last byte finished
 	    /* loop */ ;
 
+	usec_delay(1);	
+
 	stx_data = ~val;	// invert data for Stop bit generation
 	stx_count = 10;		// 10 bits: Start + data + Stop
 }
@@ -165,7 +171,7 @@ ISR(TIMER1_COMPA_vect)	// tx bit
 	unsigned char dout;
 	unsigned char count;
 
-	timer10bit_add(OCR1A, BIT_TIME);	// next bit slice
+	t1add10(OCR1A, BIT_TIME);	// next bit slice
 
 	count = stx_count;
 

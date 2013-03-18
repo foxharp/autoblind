@@ -74,7 +74,7 @@ byte ir_i;
  * set up initial chip conditions
  */
 void
-hw_init(void)
+ir_init(void)
 {
 
     // enable pullup on IR recvr, and on the debug-mode pin

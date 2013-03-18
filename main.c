@@ -37,6 +37,8 @@ void hardware_setup(void)
 	init_timer();
 	suart_init();
 	init_debug();
+
+	ir_init();
 }
 
 int main()

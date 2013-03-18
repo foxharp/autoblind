@@ -151,13 +151,10 @@ blinky(void)
 void
 do_debug_out(void)
 {
-    if (do_debug()) {
-	/* a square wave is useful for debugging baud rate issues */
-	for(;;) {
-	    putch('U');
-	}
-	/* not reached */
-    }
+    /* a square wave is useful for debugging baud rate issues */
+    while (1) putch('U');
+
+    /* not reached */
 }
 
 

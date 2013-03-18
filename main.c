@@ -47,7 +47,7 @@ int main()
 	hardware_setup();
 	sei();
 
-	do_debug_out();
+	if (do_debug()) do_debug_out();   // no return
 
 	wdt_enable(WDTO_4S);
 

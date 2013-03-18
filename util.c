@@ -114,14 +114,6 @@ void led_flash(void)
 	Led1_On();
 	led_time = get_ms_timer();
 	return;
-	/*
-	static int i;
-	// if (Led1_is_On())
-	if (i++ & 1)
-		Led1_Off();
-	else
-		Led1_On();
-		*/
 }
 
 /*
@@ -152,7 +144,7 @@ blinky(void)
 	} else {
 	    Led1_On();
 	}
-	delay(100);
+	delay(50);
     }
 }
 

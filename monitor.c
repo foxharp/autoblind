@@ -183,6 +183,7 @@ void monitor(void)
 		break;
 
 	case 'q':
+#define QUICKFOX "The Quick Brown Fox Jumps Over The Lazy Dog\n"
 		for (i = 0; i < 20; i++)
 			putstr(QUICKFOX);
 		break;

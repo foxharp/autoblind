@@ -23,12 +23,12 @@ void led_flash(void);
 
 void blinky(void);
 
+/* ground this i/o pin to enable early debug mode */
 #define PORTDEBUG PORTA
 #define PINDEBUG PINA
 #define PDEBUG PA5
 #define init_debug() {PORTDEBUG |= bit(PDEBUG);} // enable pullup
-#define do_fox()	((PINDEBUG & bit(PDEBUG)) == 0)
-#define QUICKFOX "The Quick Brown Fox Jumps Over The Lazy Dog\n"
+#define do_debug()  ((PINDEBUG & bit(PDEBUG)) == 0)
 void do_debug_out(void);
 
 

@@ -151,9 +151,8 @@ blinky(void)
 void
 do_debug_out(void)
 {
-    if (do_fox()) {
-	/* a perfect square wave is useful for debugging baud rate issues
-	 */
+    if (do_debug()) {
+	/* a square wave is useful for debugging baud rate issues */
 	for(;;) {
 	    putch('U');
 	}

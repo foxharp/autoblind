@@ -67,8 +67,11 @@ ISR(TIMER1_COMPD_vect)
 
 	milliseconds++;
 
-	if ((milliseconds % 1000) == 0) {
-		led_flash();
+	sei();
+
+	// approximately 1/second
+	if ((milliseconds & 1023) == 0) {
+	 	led_flash();
 	}
 
 }

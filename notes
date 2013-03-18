@@ -19,7 +19,7 @@ pin choices:
     MOTOR_TURN
     LIMIT
 
-    DEBUG
+    PDEBUG
 
 
 

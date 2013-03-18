@@ -72,5 +72,9 @@ extern volatile unsigned char stx_count;
 #define stx_active() (stx_count)
 
 void suart_init(void);
-// void putch( unsigned char val );
-// void sputs_p( const prog_char *txt );
+
+// #define  BAUD    38400
+// #define  BAUD    19200
+#define  BAUD    9600
+// #define  BAUD    4800
+

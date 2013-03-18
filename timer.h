@@ -26,9 +26,11 @@ void short_delay(unsigned int n);  // try not to call this.  use usec_delay()
 #define t1write10(reg, val) {		\
 	char sreg = SREG;		\
 	cli();				\
+					\
 	w10tmp = val;			\
 	TC1H = (w10tmp >> 8);		\
 	reg = w10tmp & 0xff;		\
+					\
 	SREG = sreg;			\
     }
 
@@ -37,8 +39,10 @@ static inline int t1read10_TCNT1(reg)	\
 	int r10tmp;			\
 	int sreg = SREG;		\
 	cli();				\
+					\
 	r10tmp = TCNT1 & 0xff;		\
 	r10tmp |= TC1H << 8;		\
+					\
 	SREG = sreg;			\
 	return r10tmp;			\
 }
@@ -49,8 +53,10 @@ static inline int t1read10_ICR1(reg)	\
 	int r10tmp;			\
 	int sreg = SREG;		\
 	cli();				\
+					\
 	r10tmp = ICR1 & 0xff;		\
 	r10tmp |= ICR1 << 8;		\
+					\
 	SREG = sreg;			\
 	return r10tmp;			\
 }
@@ -58,13 +64,16 @@ static inline int t1read10_ICR1(reg)	\
 
 #define t1add10(reg, incr) {		\
 	unsigned int next;		\
+					\
 	char sreg = SREG;		\
 	cli();				\
+					\
 	next = reg;			\
 	next |= TC1H << 8;		\
 	next += (incr);			\
 	TC1H = next >> 8;		\
 	reg = next & 0xff;		\
+					\
 	SREG = sreg;			\
     }
 

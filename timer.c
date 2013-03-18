@@ -45,7 +45,9 @@ void init_timer(void)
 
 	TCCR1A = 0;		// normal port operation
 
-	// the counter runs at a microsecond per tick
+	// the counter runs at a microsecond per tick.
+	// this timer is shared by suart.c, so changing
+	// the rate here has an affect there as well.
 #if F_CPU == 1000000
 	TCCR1B = bit(CS10);   // prescaler is 1
 #elif F_CPU == 8000000
@@ -54,7 +56,8 @@ void init_timer(void)
 	// TOP value -- all ones
 	t1write10(OCR1C, 0x3ff);
 
-	// 1000 usec per msec
+	// we want an interrupt every millisecond for timekeeping.
+	// use the 'D' comparator get an interrupt every 1000us.
 	t1write10(OCR1D, 1000);
 
 	TIMSK |= bit(OCIE1D);
@@ -63,13 +66,14 @@ void init_timer(void)
 
 ISR(TIMER1_COMPD_vect)
 {
+	// reprime the comparator for 1ms in the future
 	t1add10(OCR1D, 1000);
 
 	milliseconds++;
 
 	sei();
 
-	// approximately 1/second
+	// approximately 1/second (much cheaper, codewise, than "% 1000")
 	if ((milliseconds & 1023) == 0) {
 	 	led_flash();
 	}

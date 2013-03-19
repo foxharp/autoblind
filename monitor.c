@@ -165,6 +165,14 @@ void monitor(void)
 		ir_show_code();
 		break;
 
+	case 'l':
+		wdt_disable();
+		while (1) {
+		    cmd = getch();
+		    if (cmd == '\r') cmd = '\n';
+		    putch(cmd);
+		}
+
 	case 't':
 		{
 		static const char *teststring = "foobar";

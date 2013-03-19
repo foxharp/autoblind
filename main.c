@@ -61,6 +61,11 @@ int main()
 #endif
 		led_handle();
 		ir_process();
+
+		if (ir_avail()) {
+		    puthex(get_ir());
+		    crnl();
+		}
 	}
 
 }

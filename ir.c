@@ -57,11 +57,13 @@ volatile byte pulse_is_low;
 volatile byte had_overflow;
 
 #define MAX_PULSES 32
+byte ir_i;
+long ir_accum, ir_code;
+char ir_code_avail;
+
 #ifdef PULSE_DEBUG
 word ir_pulse[MAX_PULSES];  // there's a header on the front
 #endif
-long ir_accum, ir_code;
-byte ir_i;
 
 
 /*
@@ -226,8 +228,41 @@ ir_process(void)
 	ir_pulse[ir_i++] = len;
 #endif
 
-	if (ir_i >= MAX_PULSES)
+	if (ir_i >= MAX_PULSES) {
 	    ir_code = ir_accum;
+	    ir_code_avail = 1;
+	}
+    }
+}
+
+/* codes for my X10 "TV buddy" bottle-opener remote turns out
+ * it's a programmable remote, so this just happens to be the
+ * current programming.  */
+long ir_remote_code[] = {
+    0xe0e048b7,	    // up (P+)
+    0xe0e008f7,	    // down (P-)
+    0xe0e0d02f,	    // left (V-)
+    0xe0e0e01f,	    // right (V+)
+    0xe0e0f00f,	    // center (mute)
+    0xe0e040bf,	    // power
+    0
+};
+
+// wait for an IR press, and return an index into the table above
+char get_ir(void)
+{
+    byte i;
+
+    while (1) {
+	if (ir_code_avail) {
+	    for (i = 0; ir_remote_code[i]; i++) {
+		if (ir_code == ir_remote_code[i]) {
+		    ir_code_avail = 0;
+		    return i;
+		}
+	    }
+	    ir_code_avail = 0;
+	}
     }
 }
 

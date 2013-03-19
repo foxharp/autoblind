@@ -54,9 +54,9 @@ volatile word pulse_length;
 volatile byte pulse_is_low;
 volatile byte had_overflow;
 
-#define MAX_PULSES 16
-word ir_pulse[MAX_PULSES + 1];  // there's a header on the front
-word ir_code;
+#define MAX_PULSES 32
+word ir_pulse[MAX_PULSES + 2];  // there's a header on the front
+long ir_code;
 byte ir_i;
 
 
@@ -95,7 +95,8 @@ byte ir_i;
 
 #define scale_denom(fosc) ((fosc / 256) / 4)
 
-#define pulse_ms(ms) ((16384 * ms) / 1000) // convert ms to 16384'ths
+#define pulse_ms(ms) ((16384 * (long)ms) / 1000) // convert ms to 16384'ths
+// #define pulse_ms(ms) (ms * 1024)
 
 
 /*
@@ -105,13 +106,13 @@ void
 ir_init(void)
 {
 
-    // enable pullup on IR recvr, and on the debug-mode pin
+    // enable pullup on IR recvr
     IR_PORT |= bit(IR_BIT);
 
     // input capture enable, 16 bit mode, and noise canceller
-    TCCR0A = bit(ICEN0)|bit(TCW0)|bit(ICNC0);
+    TCCR0A = bit(ICEN0)|bit(TCW0); // |bit(ICNC0);
 
-    TCCR0B = CLKDIV_256;	// see comments above()
+    TCCR0B = CLKDIV_256;	// see comments above
 
     // timer0 overflow int enable, and input capture event int enable.
     TIMSK |= bit(TOIE0) | bit(TICIE0);
@@ -121,17 +122,10 @@ ir_init(void)
 /*
  * timer0 overflow interrupt handler.
  * if we hit the overflow without getting a transition on the IR
- * line, then we're certainly "between" IR packets.  we save the
- * overflow indication until the next pulse.
+ * line, then we're certainly "between" IR packets.
  */
 ISR(TIMER0_OVF_vect, ISR_NOBLOCK)
 {
-//    byte tmp;
-//    if (IR_high())
-//	tmp = 0xff;  // high byte of eventual dummy pulselen
-//    else
-//	tmp = 0x7f;
-//    had_overflow = tmp;
     had_overflow = 1;
 }
 
@@ -151,14 +145,11 @@ ISR(TIMER0_CAPT_vect, ISR_NOBLOCK)
     TCNT0H = 0;
     TCNT0L = 0;
 
-
     // change detection edge, and clear interrupt flag -- it's
     // set as result of detection edge change
     cli();
     TCCR0A ^= bit(ICES0);
-// FIXME: just write 1 to clear?
-// FIXME:  do AVR chips auto-clear pending flags?
-    TIFR &= ~bit(ICF0);
+    TIFR = bit(ICF0);
     sei();
 
 }
@@ -167,13 +158,15 @@ ISR(TIMER0_CAPT_vect, ISR_NOBLOCK)
 void
 ir_process(void)
 {
-    word len;
+    word len = 0;
+    word lastlen;
     byte low;
     byte overflow;
-    long l;
+    unsigned long l;
 
     while (pulse_length) {
 	cli();
+	lastlen = len;
 	len = pulse_length;
 	low = pulse_is_low;
 
@@ -189,14 +182,22 @@ ir_process(void)
 	    // if we had an overflow, then the current pulse_length
 	    // is meaningless -- it's just the last remnant of a
 	    // long gap.
-	    p_hex(ir_code);  // FIXME -- do something real here
+	    // p_hex32(ir_code);  // FIXME -- do something real here
 	    ir_i = 0;
 	    ir_code = 0;
 	    continue;
 	} 
 	
-	if (ir_i > MAX_PULSES) {
+	if (ir_i > MAX_PULSES + 2) {
 	    // we've gotten too many bits
+	    continue;
+	}
+
+	if (pulse_ms(5) > len     && len > pulse_ms(4) &&
+	    pulse_ms(5) > lastlen && lastlen > pulse_ms(4)) {
+	    // it's a header
+	    ir_i = 0;
+	    ir_code = 0;
 	    continue;
 	}
 	
@@ -210,6 +211,7 @@ ir_process(void)
 
 	/* do long arithmetic.  expensive, but we have time. */
 	l = (long)len * 4096 / scale_denom(F_CPU);
+	// l = (long)len * 32;
 
 	if (l > 0x7fff)	// limit range.
 	    len = 0x7fff;
@@ -233,10 +235,18 @@ void ir_show_code(void)
 {
     byte i;
 
-    p_hex(ir_code);
+    p_hex32(ir_code);
+    crnl();
+    p_hex32(ir_code << 1);
+    crnl();
 
-    for (i = 0; i < MAX_PULSES; i++) {
+    for (i = 0; i < MAX_PULSES + 2; i++) {
+	putstr("ir_pulse ");
 	putdec16(i); putstr("  ");
 	p_dec(ir_pulse[i]);
+	crnl();
     }
+
+    ir_i = 0;
+    ir_code = 0;
 }

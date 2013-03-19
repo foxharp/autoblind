@@ -33,6 +33,8 @@
 #include "common.h"
 #include "util.h"
 
+#define PULSE_DEBUG 1
+
 /*
  * GPIO usage.  the input needs to come from a pin with a timer
  * "input compare" function.
@@ -55,8 +57,10 @@ volatile byte pulse_is_low;
 volatile byte had_overflow;
 
 #define MAX_PULSES 32
-word ir_pulse[MAX_PULSES + 2];  // there's a header on the front
-long ir_code;
+#ifdef PULSE_DEBUG
+word ir_pulse[MAX_PULSES];  // there's a header on the front
+#endif
+long ir_accum, ir_code;
 byte ir_i;
 
 
@@ -93,11 +97,7 @@ byte ir_i;
  *
  */
 
-#define scale_denom(fosc) ((fosc / 256) / 4)
-
-#define pulse_ms(ms) ((16384 * (long)ms) / 1000) // convert ms to 16384'ths
-// #define pulse_ms(ms) (ms * 1024)
-
+#define usec_per_tick (256 * 1000000 / F_CPU)
 
 /*
  * set up initial chip conditions
@@ -106,7 +106,7 @@ void
 ir_init(void)
 {
 
-    // enable pullup on IR recvr
+    // enable pullup on IR receiver
     IR_PORT |= bit(IR_BIT);
 
     // input capture enable, 16 bit mode, and noise canceller
@@ -114,7 +114,12 @@ ir_init(void)
 
     TCCR0B = CLKDIV_256;	// see comments above
 
+    // start the timer
+    TCNT0H = 0;
+    TCNT0L = 0;
+
     // timer0 overflow int enable, and input capture event int enable.
+    TIFR = bit(TOV0) | bit(ICF0);   // clear first
     TIMSK |= bit(TOIE0) | bit(TICIE0);
 }
 
@@ -124,7 +129,7 @@ ir_init(void)
  * if we hit the overflow without getting a transition on the IR
  * line, then we're certainly "between" IR packets.
  */
-ISR(TIMER0_OVF_vect, ISR_NOBLOCK)
+ISR(TIMER0_OVF_vect)
 {
     had_overflow = 1;
 }
@@ -136,10 +141,11 @@ ISR(TIMER0_OVF_vect, ISR_NOBLOCK)
  */
 ISR(TIMER0_CAPT_vect, ISR_NOBLOCK)
 {
-    // read the event
-    pulse_length = OCR0A | (OCR0B << 8); // ICR0;
-    // and save the new state of the IR line.
-    pulse_is_low = IR_high();  // if high now, we just finished a low pulse
+    // save the captured time interval
+    pulse_length = OCR0A | (OCR0B << 8); // aka ICR0
+
+    // if we captured a rising edge, the pulse was low
+    pulse_is_low = (TCCR0A & bit(ICES0));
 
     // restart the timer
     TCNT0H = 0;
@@ -159,47 +165,47 @@ void
 ir_process(void)
 {
     word len = 0;
-    word lastlen;
+    static word lastlen;
     byte low;
     byte overflow;
-    unsigned long l;
 
     while (pulse_length) {
+
 	cli();
-	lastlen = len;
+	// capture length, polarity, and overflow data with interrupts off
 	len = pulse_length;
 	low = pulse_is_low;
-
 	overflow = had_overflow;
-	had_overflow = 0;
 
+	had_overflow = 0;
 	pulse_length = 0;
 
 	sei();
 
-	led_flash();
-	if (overflow) {
+	len *= usec_per_tick;  // ticks -> usec
+
+	// led_flash();
+	if (overflow || len > 10000) {
 	    // if we had an overflow, then the current pulse_length
 	    // is meaningless -- it's just the last remnant of a
 	    // long gap.
-	    // p_hex32(ir_code);  // FIXME -- do something real here
 	    ir_i = 0;
-	    ir_code = 0;
+	    ir_accum = 0;
+	    lastlen = 0;
 	    continue;
 	} 
 	
-	if (ir_i > MAX_PULSES + 2) {
-	    // we've gotten too many bits
-	    continue;
-	}
-
-	if (pulse_ms(5) > len     && len > pulse_ms(4) &&
-	    pulse_ms(5) > lastlen && lastlen > pulse_ms(4)) {
+	// there's a header of low/high of about 4500usec each
+	if (!low &&
+	    5000 > len     && len > 4000 &&
+	    5000 > lastlen && lastlen > 4000) {
 	    // it's a header
 	    ir_i = 0;
-	    ir_code = 0;
+	    ir_accum = 0;
+	    lastlen = 0;
 	    continue;
 	}
+	lastlen = len;
 	
 	if (low) {
 	    // i don't care about the low pulses right now.
@@ -208,45 +214,35 @@ ir_process(void)
 	    continue;
 	} 
 
-
-	/* do long arithmetic.  expensive, but we have time. */
-	l = (long)len * 4096 / scale_denom(F_CPU);
-	// l = (long)len * 32;
-
-	if (l > 0x7fff)	// limit range.
-	    len = 0x7fff;
-	else
-	    len = l;
-
-	if (len == 0)	// pulse length is never zero.
-	    len++;
-
-	if (ir_i >= 2) {	    // skip two "header" bits
-	    if (len > pulse_ms(1))  // longer than 1 millisecond?
-		ir_code |= 1;
-	    ir_code <<= 1;
+	if (ir_i >= MAX_PULSES) { // we've gotten too many bits
+	    continue;
 	}
 
+	ir_accum <<= 1;
+	if (len > 1000)  // longer than 1 millisecond?
+	    ir_accum |= 1;
+
+#ifdef PULSE_DEBUG
 	ir_pulse[ir_i++] = len;
+#endif
+
+	if (ir_i >= MAX_PULSES)
+	    ir_code = ir_accum;
     }
 }
 
 void ir_show_code(void)
 {
+#ifdef PULSE_DEBUG
     byte i;
+    for (i = 0; i < MAX_PULSES; i++) {
+	puthex(i);
+	putstr("\t");
+	putdec16(ir_pulse[i]);
+	crnl();
+    }
+#endif
 
     p_hex32(ir_code);
     crnl();
-    p_hex32(ir_code << 1);
-    crnl();
-
-    for (i = 0; i < MAX_PULSES + 2; i++) {
-	putstr("ir_pulse ");
-	putdec16(i); putstr("  ");
-	p_dec(ir_pulse[i]);
-	crnl();
-    }
-
-    ir_i = 0;
-    ir_code = 0;
 }

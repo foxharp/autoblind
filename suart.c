@@ -23,50 +23,71 @@
 #define TX_INVERT 0
 #define RX_INVERT 0
 
-#define bit(x) _BV(x)
-
 // timer running at 1Mhz
 #define BIT_TIME	(unsigned int)((1000000 + BAUD/2) / BAUD)
 
-volatile unsigned char stx_count;
-unsigned char stx_data;
+volatile unsigned char stx_bits;
+volatile unsigned char stx_data;
 
 #ifndef NO_RECEIVE
 volatile unsigned char srx_done;
-unsigned char srx_data;
-unsigned char srx_mask;
-unsigned char srx_tmp;
+volatile unsigned char srx_data;
+volatile unsigned char srx_mask;
+volatile unsigned char srx_tmp;
+#endif
+
+// search for "Table 12-8.  Compare Output Mode, Normal Mode
+// (non-PWM)" or something similar in the datasheet to see
+// what's happening here.  these select the output level that
+// will be set on the next timer1 compare match A.
+#if TX_INVERT
+#define SET_TX_LOW_NEXT (bit(COM1A1)|bit(COM1A0))	// set high
+#define SET_TX_HIGH_NEXT (bit(COM1A1))			// set low
+#else
+#define SET_TX_LOW_NEXT (bit(COM1A1))			// set low
+#define SET_TX_HIGH_NEXT (bit(COM1A1)|bit(COM1A0))	// set high
 #endif
 
 
 void suart_init(void)
 {
 	int w10tmp;
-	// timer_init has already configured the rate
 
-	// OCR1A = TCNT1 + 1;			// force first compare
-	t1write10(OCR1A, t1read10_TCNT1() + 1);
-	TCCR1A = bit(COM1A1) | bit(COM1A0);	// set OC1A high, T1 mode 0
+	// timer_init has already configured the basic rate --
+	// the 10-bit timer is running at 1Mhz
 
-	STIMSK |= bit(OCIE1A);			// enable tx
-	stx_count = 0;				// nothing to sent
-	STXDDR |= bit(STX);			// TX output
+	STXDDR |= bit(STX);		// set TX as output
+
+	// configure timer to go high on next compare match...
+	TCCR1A = SET_TX_HIGH_NEXT;	// set OC1A high, T1 mode 0
+
+	// ...and force that compare to happen soon.
+	t1write10(OCR1A, t1read10_TCNT1() + 25);
+
+	stx_bits = 0;			// nothing to send right now
+	STIMSK |= bit(OCIE1A);		// enable tx
+
 
 #ifndef NO_RECEIVE
 # if RX_USE_INPUT_CAPTURE_INT
 	// enable noise canceller
 	TCCR1B = bit(ICNC1);
 #  if RX_INVERT
-	// rising rather than falling transition
+	// look for rising rather than falling start-bit edge
 	TCCR1B |= bit(ICES1);
 #  endif
 	// CLK/1, T1 mode 0
 	STIFR = bit(ICF1);	// clear pending interrupt
 	STIMSK |= bit(ICIE1);	// enable rx and wait for start
 # else
-	MCUCR = bit(ISC01);	// falling edge on INT0 (and INT1)
-	GIFR = bit(INTF0);	// clear pending interrupt
-	GIMSK |= bit(INT0);	// enable rx and wait for start bit
+	// configure falling edge on INT0 (NB: and also on INT1)
+#  if ! RX_INVERT
+	MCUCR = bit(ISC01);
+#  endif
+
+	// clear and enable start bit edge interrupt
+	GIFR = bit(INTF0);
+	GIMSK |= bit(INT0);
 # endif
 
 	srx_done = 0;				// nothing received
@@ -83,7 +104,7 @@ unsigned char getch(void)	// get byte
 }
 
 
-// check if the received bit is high
+// SRX_HIGH() -- is the received bit high?
 #if RX_INVERT
 #define SRX_HIGH(x) (((x) & bit(SRX)) == 0)
 #else
@@ -91,6 +112,7 @@ unsigned char getch(void)	// get byte
 #endif
 
 
+// we've seen the falling edge of the start bit
 #if RX_USE_INPUT_CAPTURE_INT
 ISR(TIMER1_CAPT_vect)		// rx start
 #else
@@ -98,20 +120,20 @@ ISR(INT0_vect)		// rx start
 #endif
 {
 	int w10tmp;
-	// scan 1.5 bits after start
+
+	// schedule our next interrupt 1.5 bits from now
 #if RX_USE_INPUT_CAPTURE_INT
 	t1write10(OCR1B, t1read10_ICR1() + (unsigned int) (3 * BIT_TIME / 2));
 #else
 	GIMSK &= ~bit(INT0);
-	
 	t1write10(OCR1B, (t1read10_TCNT1() + (unsigned int) (3 * BIT_TIME / 2)));
 #endif
 
-	srx_tmp = 0;				// clear bit storage
-	srx_mask = 1;				// bit mask
-	STIFR = bit(OCF1B);			// clear pending interrupt
+	srx_tmp = 0;			// clear incoming byte storage
+	srx_mask = 1;			// the bit we're expecting next
+	STIFR = bit(OCF1B);		// clear pending interrupt
 
-	if (!SRX_HIGH(SRXPIN)) {		// still low (i.e., start bit)
+	if (!SRX_HIGH(SRXPIN)) {	// still low (i.e., start bit)
 		STIMSK &= ~bit(OCIE1A);	// disable tx
 		STIMSK |= bit(OCIE1B);	// wait for first bit
 	}
@@ -119,76 +141,78 @@ ISR(INT0_vect)		// rx start
 }
 
 
-ISR(TIMER1_COMPB_vect)
+ISR(TIMER1_COMPB_vect)   // time to sample the value of an RX bit
 {
-	unsigned char in = SRXPIN;	// scan rx line
+	unsigned char in = SRXPIN;	// grab current rx level
 
 	if (srx_mask) {
-		t1add10(OCR1B, BIT_TIME);	// next bit slice
+		// schedule interrupt for next bit sample
+		t1add10(OCR1B, BIT_TIME);
+
+		// record the received bit
 		if (SRX_HIGH(in))
 			srx_tmp |= srx_mask;
+
 		srx_mask <<= 1;
+
 	} else {
+		// all done
 		srx_done = 1;			// mark rx data valid
 		srx_data = srx_tmp;		// store rx data
+
+		// disable the bit sampling interrupt
 		STIMSK &= ~bit(OCIE1B);		// disable rx bit timer
 		STIMSK |= bit(OCIE1A);		// enable tx
-		// STIMSK = bit(OCIE1A);		// enable tx
+
+		// clear and enable the start-bit edge interrupt
 #if RX_USE_INPUT_CAPTURE_INT
-		STIFR = bit(ICF1);		// clear pending interrupt
-		STIMSK |= bit(ICIE1)		// enable rx
+		STIFR = bit(ICF1);
+		STIMSK |= bit(ICIE1)
 #else
-		GIFR = bit(INTF0);		// clear pending interrupt
-		GIMSK |= bit(INT0);		// enable rx
+		GIFR = bit(INTF0);
+		GIMSK |= bit(INT0);
 #endif
 	}
 }
 #endif
 
 
-void putch(char val)		// send byte
+void putch(char val)		// send a character
 {
 	if (val == '\n')
 		putch('\r');
 
-	while (stx_count)	// until last byte finished
+	while (stx_bits)	// loop until previous character is sent
 	    /* loop */ ;
 
-	usec_delay(1);	
-
+	// we need to send 10 bits, but can only store 8.  the
+	// start bit is 0, the stop bit is 1.  we special-case the
+	// start bit when transmitting, but can get the stop bit
+	// for "free" by inverting the data.
 	stx_data = ~val;	// invert data for Stop bit generation
-	stx_count = 10;		// 10 bits: Start + data + Stop
+	stx_bits = 10;		// 1 start bit + 8 + 1 stop bit
 }
 
 
-// search for "Table 12-8.  Compare Output Mode, Normal Mode
-// (non-PWM)" or something similar in the datasheet to see
-// what's happening here.
-#if TX_INVERT
-#define SET_TX_LOW_NEXT (bit(COM1A1)|bit(COM1A0))	// set high
-#define SET_TX_HIGH_NEXT (bit(COM1A1))			// set low
-#else
-#define SET_TX_LOW_NEXT (bit(COM1A1))			// set low
-#define SET_TX_HIGH_NEXT (bit(COM1A1)|bit(COM1A0))	// set high
-#endif
-
-ISR(TIMER1_COMPA_vect)	// tx bit
+ISR(TIMER1_COMPA_vect)  // time to transmit a bit
 {
 	unsigned char dout;
-	unsigned char count;
+	unsigned char remaining;
 
-	t1add10(OCR1A, BIT_TIME);	// next bit slice
 
-	count = stx_count;
+	// schedule another interrupt one bit-time from now
+	t1add10(OCR1A, BIT_TIME);
 
-	if (count) {
-		stx_count = --count;	// count down
+	remaining = stx_bits;
+
+	if (remaining) {
 		dout = SET_TX_LOW_NEXT;
-		if (count != 9) {		// no start bit
-			if (!(stx_data & 1))	// test inverted data
+		if (remaining != 10) {	// all except for the start bit
+			if ((stx_data & 1) == 0)  // test inverted data
 				dout = SET_TX_HIGH_NEXT;
-			stx_data >>= 1;		// shift zero in from left
+			stx_data >>= 1;	// zero fill from left, gives stop bit
 		}
 		TCCR1A = dout;
+		stx_bits = remaining - 1;	// count down
 	}
 }

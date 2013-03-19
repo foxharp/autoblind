@@ -12,6 +12,7 @@
  * LICENSE file for details.
  */
 #ifdef _AVR_IOM8_H_
+#define RX_USE_INPUT_CAPTURE_INT 1
 # define SRX     PB0			// ICP on Mega8
 # define SRXPIN  PINB
 
@@ -24,6 +25,7 @@
 # define TICIE1	ICIE1
 
 #elif defined(_AVR_IOTN44_H_)
+#define RX_USE_INPUT_CAPTURE_INT 1
 
 # define SRX     PA7			// ICP on tiny44
 # define SRXPIN  PINA
@@ -36,7 +38,7 @@
 
 #elif defined(_AVR_IOTN861_H_)
 
-#if RX_USE_INPUT_CAPTURE_INT
+#ifdef RX_USE_INPUT_CAPTURE_INT
 # define SRX     PA4			// ICP on tiny??
 # define SRXPIN  PINA
 #else

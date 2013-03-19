@@ -60,7 +60,7 @@ int main()
 		monitor();
 #endif
 		led_handle();
-//		ir_process();
+		ir_process();
 	}
 
 }

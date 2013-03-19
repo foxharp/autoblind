@@ -134,7 +134,6 @@ ISR(INT0_vect)		// rx start
 	STIFR = bit(OCF1B);		// clear pending interrupt
 
 	if (!SRX_HIGH(SRXPIN)) {	// still low (i.e., start bit)
-		STIMSK &= ~bit(OCIE1A);	// disable tx
 		STIMSK |= bit(OCIE1B);	// wait for first bit
 	}
 
@@ -162,7 +161,6 @@ ISR(TIMER1_COMPB_vect)   // time to sample the value of an RX bit
 
 		// disable the bit sampling interrupt
 		STIMSK &= ~bit(OCIE1B);		// disable rx bit timer
-		STIMSK |= bit(OCIE1A);		// enable tx
 
 		// clear and enable the start-bit edge interrupt
 #if RX_USE_INPUT_CAPTURE_INT
@@ -194,7 +192,7 @@ void putch(char val)		// send a character
 }
 
 
-ISR(TIMER1_COMPA_vect)  // time to transmit a bit
+ISR(TIMER1_COMPA_vect, ISR_NOBLOCK)  // time to transmit a bit
 {
 	unsigned char dout;
 	unsigned char remaining;

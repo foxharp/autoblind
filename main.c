@@ -16,6 +16,7 @@
 #include "common.h"
 #include "timer.h"
 #include "ir.h"
+#include "blind.h"
 #include "util.h"
 
 volatile byte mcusr_mirror;
@@ -62,10 +63,7 @@ int main()
 		led_handle();
 		ir_process();
 
-		if (ir_avail()) {
-		    puthex(get_ir());
-		    crnl();
-		}
+		blind_process();
 	}
 
 }

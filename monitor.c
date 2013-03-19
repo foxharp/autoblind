@@ -19,6 +19,7 @@
 #include "common.h"
 #include "suart.h"
 #include "ir.h"
+#include "blind.h"
 #include "util.h"
 #ifdef USE_PRINTF
 #include <stdio.h>
@@ -130,6 +131,19 @@ void monitor(void)
 	case '\0':
 		break;
 
+	case 'u': // up
+		blind_cmd = BL_GO_UP;
+		break;
+	case 'd': // down
+		blind_cmd = BL_GO_DOWN;
+		break;
+	case 's': // stop
+		blind_cmd = BL_STOP;
+		break;
+	case 'm': // mark
+		blind_cmd = BL_SET_TOP;
+		break;
+
 #if 0
 	case 'D':  // calibrate the delay timer
 	{
@@ -225,7 +239,7 @@ void monitor(void)
 		break;
 
 	case 'x':					//  read 1 byte from xdata
-	case 'd':					//  read 1 byte from data
+	case 'X':					//  read 1 byte from data
 		addr = gethex();
 		addr_is_data = (cmd == 'd');
 		// fallthrough

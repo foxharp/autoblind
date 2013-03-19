@@ -31,3 +31,60 @@ pin choices:
    MOTOR_DIR
             NC (PB6)
    MOTOR_ROT
+
+
+-------X10 bottle-opener remote
+
+begin remote
+
+  name  X10_opener
+  bits           13
+  flags SPACE_ENC|CONST_LENGTH|REPEAT_HEADER
+  eps            30
+  aeps          100
+
+  header       4574  4549
+  one           554  1666
+  zero          554   554
+  ptrail        524
+  repeat        510   595
+  pre_data_bits   16
+  pre_data       0xE0E0
+  post_data_bits  3
+  post_data      0x7
+  gap          107606
+  repeat_bit      0
+
+      begin codes
+          left                     0x0000000000001A05
+          right                    0x0000000000001C03
+#          up                       0x0000000000000916
+          lr_volup                       0x0000000000000916
+#          down                     0x000000000000011E
+          lr_voldown                     0x000000000000011E
+          center                   0x0000000000001E01
+#          power                    0x0000000000000817
+          speakers                 0x0000000000000817
+      end codes
+
+end remote
+
+0x0000000000001A05 1 << h
+0x0000000000001C03 1 << h
+0x0000000000000916 1 << h
+0x000000000000011E 1 << h
+0x0000000000001E01 1 << h
+0x0000000000000817 1 << h
+
+0x0000000000001A05 1 << h
+ 0x340a
+0x0000000000001C03 1 << h
+ 0x3806
+0x0000000000000916 1 << h
+ 0x122c
+0x000000000000011E 1 << h
+ 0x23c
+0x0000000000001E01 1 << h
+ 0x3c02
+0x0000000000000817 1 << h
+ 0x102e

@@ -6,31 +6,49 @@ pin restrictions:
     SUART_RX serial needs to be on INT0:  PB6 on attiny861
     SUART_TX serial needs to be on OC1A:  PB1 on attiny861
 
+    MOTOR_TURN needs to be on INT1:  PA2 on attiny861
+
     bootloader uses PA2?
 
     PB0, PB1, PB2, and PB7 (reset) are used during programming.
+    PB2 is connected XOstick button, and we use it for debug mode
     PB0 and PB1 are the LEDs
+    PB3 and PB4 are used for USB
 
     that leaves PB3, PB4, PB5, PA0, PA1, PA3 - PA7
 
 pin choices:
-    MOTOR_ON
-    MOTOR_DIR
-    MOTOR_TURN
-    LIMIT
+    MOTOR_ON	PA0
+    MOTOR_DIR	PA1
+    MOTOR_TURN  PA2
 
-    PDEBUG
+    LIMIT	PA3
 
+    IR_IN	PA4
 
+    PDEBUG	PB2
+
+    SUART_RX	PB6
+    SUART_TX	PB1
 
 6-pin connector to motor
 
-            +5 (AREF)   jumper to nearest pad of USB jack
-            GND
-   MOTOR_ON
-   MOTOR_DIR
-            NC (PB6)
-   MOTOR_ROT
+    +5 
+    MOTOR_ON
+    MOTOR_DIR
+    nc
+    GND
+    MOTOR_ROT
+
+2-pin connector to limit switch
+    GND
+    LIMIT
+
+4-pin connector to IR sensor
+    +5
+    IR
+    nc
+    GND
 
 
 -------X10 bottle-opener remote
@@ -58,33 +76,11 @@ begin remote
       begin codes
           left                     0x0000000000001A05
           right                    0x0000000000001C03
-#          up                       0x0000000000000916
-          lr_volup                       0x0000000000000916
-#          down                     0x000000000000011E
-          lr_voldown                     0x000000000000011E
+          up                       0x0000000000000916
+          down                     0x000000000000011E
           center                   0x0000000000001E01
-#          power                    0x0000000000000817
-          speakers                 0x0000000000000817
+          power                    0x0000000000000817
       end codes
 
 end remote
 
-0x0000000000001A05 1 << h
-0x0000000000001C03 1 << h
-0x0000000000000916 1 << h
-0x000000000000011E 1 << h
-0x0000000000001E01 1 << h
-0x0000000000000817 1 << h
-
-0x0000000000001A05 1 << h
- 0x340a
-0x0000000000001C03 1 << h
- 0x3806
-0x0000000000000916 1 << h
- 0x122c
-0x000000000000011E 1 << h
- 0x23c
-0x0000000000001E01 1 << h
- 0x3c02
-0x0000000000000817 1 << h
- 0x102e

@@ -34,20 +34,22 @@ void hardware_setup(void)
 	// disable analog comparator -- saves power
 	ACSRA = bit(ACD);
 
-	util_init();
-	init_timer();
-	suart_init();
-	init_debug();
-
-	ir_init();
 }
 
 int main()
 {
+	init_debug();
 	init_led();
 	blinky();
 
 	hardware_setup();
+
+	util_init();
+	init_timer();
+	suart_init();
+	ir_init();
+	blind_init();
+
 	sei();
 
 	if (do_debug()) do_debug_out();   // no return

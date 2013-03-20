@@ -38,7 +38,7 @@ static char blind_cur, blind_next;
 
 static int pulses;
 static int pulsegoal;
-static int peak;
+static int top_stop;
 int get_pulses(void);
 void zero_pulses(void);
 
@@ -107,7 +107,7 @@ blind_init(void)
     
     pulsegoal = 300;
 
-    peak = NOMINAL_PEAK;
+    top_stop = NOMINAL_PEAK;
 }
 
 void
@@ -179,13 +179,13 @@ void blind_state(void)
 	    stop_moving();
 	    zero_pulses();
 	    blind_cur = BLIND_AT_LIMIT;
-	} else if (get_pulses() >= peak) {
+	} else if (get_pulses() >= top_stop) {
 	    stop_moving();
 	    blind_cur = BLIND_AT_PEAK;
 	} else if (blind_next == BLIND_RISING) {
 	    start_moving_up();
 	    blind_cur = BLIND_RISING;
-	    pulsegoal = peak;
+	    pulsegoal = top_stop;
 	} else if (blind_next == BLIND_FALLING) {
 	    start_moving_down();
 	    blind_cur = BLIND_FALLING;
@@ -200,7 +200,7 @@ void blind_state(void)
 	} else if (blind_next == BLIND_RISING) {
 	    start_moving_up();
 	    blind_cur = BLIND_RISING;
-	    pulsegoal = peak;
+	    pulsegoal = top_stop;
 	}
 	break;
 
@@ -208,7 +208,7 @@ void blind_state(void)
 	if (blind_next == BLIND_RISING) {
 	    start_moving_up();
 	    blind_cur = BLIND_RISING;
-	    pulsegoal = peak;
+	    pulsegoal = top_stop;
 	}
 	break;
 
@@ -233,7 +233,7 @@ void blind_state(void)
 	} else if (blind_next == BLIND_FORCE_RISING) {
 	    start_moving_up();
 	    blind_cur = BLIND_RISING;
-	    pulsegoal = peak + 25;
+	    pulsegoal = top_stop + 25;
 	}
 	break;
 
@@ -401,7 +401,7 @@ void blind_process(void)
 	break;
 
     case BL_SET_TOP:
-	peak = get_pulses();
+	top_stop = get_pulses();
 	break;
 
     case BL_FORCE_UP:

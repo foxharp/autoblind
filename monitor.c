@@ -140,6 +140,9 @@ void monitor(void)
 	case 's': // stop
 		blind_cmd = BL_STOP;
 		break;
+	case 'f': // force up
+		blind_cmd = BL_FORCE_UP;
+		break;
 	case 'm': // mark
 		blind_cmd = BL_SET_TOP;
 		break;

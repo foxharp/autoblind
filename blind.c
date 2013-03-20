@@ -4,11 +4,10 @@
 #include <avr/pgmspace.h>
 #include <avr/sleep.h>
 #include "common.h"
+#include "timer.h"
 #include "util.h"
 #include "blind.h"
 #include "ir.h"
-
-char cur_rotation;
 
 #define PORTMOTOR PORTA
 #define PINMOTOR PINA
@@ -18,40 +17,36 @@ char cur_rotation;
 #define P_MOTOR_TURN	PA2
 #define P_LIMIT		PA3
 
-#define NOT_MOVING 0
-#define MOVING_UP 1
-#define MOVING_DOWN 2
-#define BOUNCEBACK 2
-char motion;
-char atpeak;
+static char cur_rotation;
+#define SET_CW  0
+#define SET_CCW 1
 
-#define LEAVING_LIMIT 10
-#define LOW_IDLE (LEAVING_LIMIT * 3)
-int pulses;
-int pulsegoal;
-int peak;
+#define MOTOR_STOPPED	0
+#define MOTOR_CW	1
+#define MOTOR_CCW	2
+#define MOTOR_REVERSE	3
+static char motor_cur, motor_next;
+static long motor_state_timer;
+
+#define BLIND_STOPPED		0
+#define BLIND_FALLING		1
+#define BLIND_AT_LIMIT		2
+#define BLIND_RISING		3
+#define BLIND_AT_PEAK		4
+#define BLIND_FORCE_RISING	5
+static char blind_cur, blind_next;
+
+static int pulses;
+static int pulsegoal;
+static int peak;
+int get_pulses(void);
+void zero_pulses(void);
 
 #define NOMINAL_PEAK 200
 
 char blind_cmd;
 
-#define post_stop_delay() // sleep(1)
-
-/* commands come from either local buttons or serial */
-char
-get_local_cmd(void)
-{
-    return 0;
-}
-
 /* I/O -- read the limit switch, control the motors */
-int
-hitlimit(void)
-{
-    /* detect the limit switch */
-    return PINMOTOR & bit(P_LIMIT);
-}
-
 void
 set_motion(int on)
 {
@@ -70,6 +65,19 @@ set_direction(int cw)
 	PORTMOTOR |= bit(P_MOTOR_DIR);
     else
 	PORTMOTOR &= ~bit(P_MOTOR_DIR);
+}
+
+char
+get_direction(void)
+{
+    /* get rotation bit */
+    return !!(PINMOTOR & bit(P_MOTOR_DIR));
+}
+
+int at_limit(void)
+{
+    /* detect the limit switch */
+    return !!(PINMOTOR & bit(P_LIMIT));
 }
 
 /*
@@ -91,56 +99,237 @@ blind_init(void)
     GIMSK |= bit(INT1);
 
     set_motion(0);
-    set_direction(0);
-    pulses = pulsegoal = LOW_IDLE;
-    cur_rotation = 0;
+
+    cur_rotation = SET_CW;
+    set_direction(SET_CW);
+
+    zero_pulses();
+    
+    pulsegoal = 300;
 
     peak = NOMINAL_PEAK;
-    motion = NOT_MOVING;
-    atpeak = 0;
 }
 
 void
 stop_moving(void)
 {
-    set_motion(0);
-    post_stop_delay();
+    putstr("stop_moving\n");
+    motor_next = MOTOR_STOPPED;
 }
 
+#if 0
 void
 start_moving(void)
 {
-    set_direction(cur_rotation);
-    set_motion(1);
+    putstr("start_moving");
+    if (cur_rotation == SET_CW) {
+	putstr(" up");
+	motor_next = MOTOR_CW;
+    } else {
+	putstr(" down");
+	motor_next = MOTOR_CCW;
+    }
+}
+#endif
+
+void
+start_moving_up(void)
+{
+    putstr("start moving up");
+    motor_next = MOTOR_CW;
 }
 
-ISR(INT1_vect)		// limit switch
+void
+start_moving_down(void)
 {
-    pulses++;
-    if (hitlimit() && pulses > LEAVING_LIMIT) {
+    putstr("start moving down");
+    motor_next = MOTOR_CCW;
+}
 
-	if (motion != BOUNCEBACK) {
-	    stop_moving();
-	    cur_rotation = !cur_rotation;
+void blind_state(void)
+{
+    if (1)
+    {
+	static char last_blind_cur = -1, last_blind_next = -1;
+	if (blind_cur != last_blind_cur) {
+	    p_hex(blind_cur);
+	    last_blind_cur = blind_cur;
 	}
-
-	if (motion == MOVING_DOWN) {
-	    peak = pulses/2;
-	    // we want to move back up off the limit
-	    pulsegoal = LOW_IDLE;
-	    motion = BOUNCEBACK;
-	}
-	start_moving();
-	pulses = 0;
-    } else  if (motion == MOVING_UP || motion == BOUNCEBACK) {
-
-	if (pulses >= pulsegoal) {
-	    stop_moving();
-	    if (motion == MOVING_UP)
-		atpeak = 1;
-	    motion = NOT_MOVING;
+	if (blind_next != last_blind_next) {
+	    p_hex(blind_next);
+	    last_blind_next = blind_next;
 	}
     }
+
+    if (blind_next == blind_cur)
+	return;
+
+    if (blind_next == BLIND_STOPPED) {
+	stop_moving();
+	blind_cur = BLIND_STOPPED;
+	return;
+    }
+
+    if (motor_state_timer) // no changes while the motor is settling
+	return;
+
+    switch (blind_cur) {
+    case BLIND_STOPPED:
+	if (at_limit()) {
+	    stop_moving();
+	    zero_pulses();
+	    blind_cur = BLIND_AT_LIMIT;
+	} else if (get_pulses() >= peak) {
+	    stop_moving();
+	    blind_cur = BLIND_AT_PEAK;
+	} else if (blind_next == BLIND_RISING) {
+	    start_moving_up();
+	    blind_cur = BLIND_RISING;
+	    pulsegoal = peak;
+	} else if (blind_next == BLIND_FALLING) {
+	    start_moving_down();
+	    blind_cur = BLIND_FALLING;
+	}
+	break;
+
+    case BLIND_FALLING:
+	if (at_limit()) {
+	    stop_moving();
+	    zero_pulses();
+	    blind_cur = BLIND_AT_LIMIT;
+	} else if (blind_next == BLIND_RISING) {
+	    start_moving_up();
+	    blind_cur = BLIND_RISING;
+	    pulsegoal = peak;
+	}
+	break;
+
+    case BLIND_AT_LIMIT:
+	if (blind_next == BLIND_RISING) {
+	    start_moving_up();
+	    blind_cur = BLIND_RISING;
+	    pulsegoal = peak;
+	}
+	break;
+
+    case BLIND_RISING:
+	if (at_limit()) {  // surprising
+	    stop_moving();
+	    zero_pulses();
+	    blind_cur = BLIND_STOPPED;
+	} else if (blind_next == BLIND_FALLING) {
+	    start_moving_down();
+	    blind_cur = BLIND_FALLING;
+	} else if (get_pulses() == pulsegoal) {
+	    stop_moving();
+	    blind_cur = BLIND_AT_PEAK;
+	}
+	break;
+
+    case BLIND_AT_PEAK:
+	if (blind_next == BLIND_FALLING) {
+	    start_moving_down();
+	    blind_cur = BLIND_FALLING;
+	} else if (blind_next == BLIND_FORCE_RISING) {
+	    start_moving_up();
+	    blind_cur = BLIND_RISING;
+	    pulsegoal = peak + 25;
+	}
+	break;
+
+    }
+
+}
+
+void motor_state(void)
+{
+    // ensure we make all direction changes while motor is stopped.
+    // ensure we don't restart too soon after stopping.
+
+    if (1)
+    {
+	static char last_motor_cur = -1, last_motor_next = -1;
+	if (motor_cur != last_motor_cur) {
+	    p_hex(motor_cur);
+	    last_motor_cur = motor_cur;
+	}
+	if (motor_next != last_motor_next) {
+	    p_hex(motor_next);
+	    last_motor_next = motor_next;
+	}
+    }
+
+    if (motor_next == MOTOR_REVERSE) {
+	switch (motor_cur) {
+	case MOTOR_CCW:	    motor_next = MOTOR_CW;  break;
+	case MOTOR_CW:	    motor_next = MOTOR_CCW;  break;
+	case MOTOR_STOPPED: motor_next = MOTOR_STOPPED; break;
+	}
+    }
+
+    if (motor_state_timer && !check_timer (motor_state_timer, 200)) {
+	    return;
+    }
+    motor_state_timer = 0;
+
+    if (motor_next == motor_cur)
+	return;
+
+    switch (motor_cur) {
+    case MOTOR_CCW:
+    case MOTOR_CW:
+	motor_cur = MOTOR_STOPPED;
+	set_motion(0);
+	motor_state_timer = get_ms_timer();
+	break;
+
+    case MOTOR_STOPPED:
+	if (motor_next == MOTOR_CW && cur_rotation != SET_CW) {
+	    cur_rotation = SET_CW;
+    	    set_direction(SET_CW);
+	    motor_state_timer = get_ms_timer();
+	    break;
+	}
+
+	if (motor_next == MOTOR_CCW && cur_rotation != SET_CCW) {
+	    cur_rotation = SET_CCW;
+    	    set_direction(SET_CCW);
+	    motor_state_timer = get_ms_timer();
+	    break;
+	}
+
+	if (motor_next != MOTOR_STOPPED) {
+	    motor_cur = motor_next;
+    	    set_motion(1);
+	}
+
+    }
+}
+
+ISR(INT1_vect)		// rotation pulse
+{
+    if (get_direction())
+	pulses++;
+    else
+	pulses--;
+}
+
+int get_pulses(void)
+{
+    int p;
+
+    cli();
+    p = pulses;
+    sei();
+
+    return p;
+}
+
+void zero_pulses(void)
+{
+    cli();
+    pulses = 0;
+    sei();
 }
 
 void blind_ir(void)
@@ -190,25 +379,33 @@ void blind_process(void)
 
     blind_ir();
 
+    motor_state();
+
+    blind_state();
+
     cmd = blind_get_cmd();
     if (!cmd)
 	return;
 
     switch (cmd) {
     case BL_STOP:
-	stop_moving();
+	blind_next = BLIND_STOPPED;
 	break;
 
     case BL_GO_UP:
-	if (atpeak)
-	    break;
-
-	pulsegoal = peak;
-	start_moving();
+	blind_next = BLIND_RISING;
 	break;
 
     case BL_GO_DOWN:
-	start_moving();
+	blind_next = BLIND_FALLING;
+	break;
+
+    case BL_SET_TOP:
+	peak = get_pulses();
+	break;
+
+    case BL_FORCE_UP:
+	blind_next = BLIND_FORCE_RISING;
 	break;
     }
 }

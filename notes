@@ -84,3 +84,8 @@ begin remote
 
 end remote
 
+
+--------   non-volatile config ----
+
+    - IR codes
+    - top (and bottom) motion limits

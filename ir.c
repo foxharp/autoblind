@@ -39,9 +39,9 @@
  * GPIO usage.  the input needs to come from a pin with a timer
  * "input compare" function.
  */
-#define IR_BIT		PA4   // input:  from IR receiver
 #define IR_PORT		PORTA
 #define IR_PIN		PINA
+#define IR_BIT		PA4   // input:  from IR receiver
 
 /* hardware access macro */
 #define IR_high()	(IR_PIN & bit(IR_BIT))

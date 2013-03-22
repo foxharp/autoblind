@@ -7,7 +7,6 @@
  * for details.
  */
 
-//typedef unsigned long time_t;
 
 void init_timer(void);
 long get_ms_timer(void);

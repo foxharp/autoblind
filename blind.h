@@ -2,6 +2,8 @@
 void blind_init(void);
 void blind_ir(void);
 void blind_process(void);
+void blind_save_config(void);
+void blind_set_position(int n);
 
 enum {
     BL_STOP = 1,

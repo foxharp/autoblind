@@ -3,6 +3,7 @@
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include <avr/sleep.h>
+#include <avr/eeprom.h>
 #include "common.h"
 #include "timer.h"
 #include "util.h"
@@ -54,6 +55,7 @@ struct blind_config {
     int top_stop;
     int bottom_stop;
     int position;
+    int padding [13];
 } blc[1];
 
 #define NOMINAL_PEAK 200
@@ -103,13 +105,20 @@ char at_limit(void)
     return !!(PINMOTOR & bit(P_LIMIT));
 }
 
-/*
- * the LOW_IDLE stopping position is a position near the
- * limit switch, but not on it.  it's easier to hit
- * the limit and back off while we still know what direction
- * we're going than it is to leave the limit as we're starting up.
- * 
- */
+void blind_read_config(void)
+{
+    int i;
+    int *ip;
+    eeprom_read_block(blc, 0, sizeof(blc));
+    for (i = 0, ip = (int *)&blc; i < 16; i++, ip++) {
+	p_hex(i); p_hex(*ip++); crnl();
+    }
+}
+
+void blind_save_config(void)
+{
+    eeprom_update_block(blc, 0, sizeof(blc));
+}
 
 void blind_init(void)
 {
@@ -125,12 +134,14 @@ void blind_init(void)
     cur_rotation = SET_CW;
     set_direction(SET_CW);
 
-    zero_position();
-    
-    goal = inch_to_pulse(10);
+    blind_read_config();
 
-    blc->top_stop = NOMINAL_PEAK;
-    blc->bottom_stop = -10000;
+    if (!blc->top_stop)
+	blc->top_stop = NOMINAL_PEAK;
+    if (!blc->bottom_stop)
+	blc->bottom_stop = -10000;
+
+    goal = inch_to_pulse(10);
 }
 
 void stop_moving(void)
@@ -378,6 +389,14 @@ int get_position(void)
     sei();
 
     return p;
+}
+
+/* mainly for debug, for use from monitor */
+void blind_set_position(int p)
+{
+    cli();
+    blc->position = p;
+    sei();
 }
 
 void zero_position(void)

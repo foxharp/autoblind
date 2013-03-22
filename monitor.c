@@ -147,10 +147,16 @@ void monitor(void)
 		blind_cmd = BL_FORCE_DOWN;
 		break;
 	case 'm':
+		blind_set_position(n);
 		blind_cmd = BL_SET_TOP;
 		break;
 	case 'M':
+		blind_set_position(n);
 		blind_cmd = BL_SET_BOTTOM;
+		break;
+
+	case 'B':
+		blind_save_config();
 		break;
 
 #if 0

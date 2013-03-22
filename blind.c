@@ -17,25 +17,31 @@
 #define P_MOTOR_TURN	PA2
 #define P_LIMIT		PA3
 
+enum {
+    SET_CW = 0,
+    SET_CCW
+};
 static char cur_rotation;
-#define SET_CW  0
-#define SET_CCW 1
 
-#define MOTOR_STOPPED	0
-#define MOTOR_CW	1
-#define MOTOR_CCW	2
-#define MOTOR_REVERSE	3
+enum {
+    MOTOR_STOPPED = 0,
+    MOTOR_CW,
+    MOTOR_CCW,
+    MOTOR_REVERSE,
+};
 static char motor_cur, motor_next;
 static long motor_state_timer;
 
-#define BLIND_STOPPED          0
-#define BLIND_FALLING          1
-#define BLIND_AT_LIMIT         2
-#define BLIND_RISING           3
-#define BLIND_AT_TOP_STOP      4
-#define BLIND_AT_BOTTOM_STOP   5
-#define BLIND_FORCE_RISING     6
-#define BLIND_FORCE_FALLING    7
+enum {
+    BLIND_STOPPED = 0,
+    BLIND_RISING,
+    BLIND_FALLING,
+    BLIND_FORCE_RISING,
+    BLIND_FORCE_FALLING,
+    BLIND_AT_TOP_STOP,
+    BLIND_AT_BOTTOM_STOP,
+    BLIND_AT_LIMIT,
+};
 
 static char blind_cur, blind_next;
 

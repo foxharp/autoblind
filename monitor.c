@@ -1,9 +1,8 @@
-/* vi: set sw=4 ts=4: */
 /*
  * monitor.c - simple monitor
  *
  * Copyright (c) 2010 One Laptop per Child
- * Copyright (c) 2011 Paul Fox, pgf@foxharp.boston.ma.us
+ * Copyright (c) 2013 Paul Fox, pgf@foxharp.boston.ma.us
  *
  * Licensed under GPL version 2, see accompanying LICENSE file
  * for details.
@@ -346,3 +345,6 @@ void monitor(void)
 
 #endif
 #endif
+
+
+/* vi: set sw=4 ts=4: */

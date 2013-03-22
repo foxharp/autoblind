@@ -10,7 +10,11 @@
  * This file included in irmetermon by written permission of the
  * author.  irmetermon is licensed under GPL version 2, see accompanying
  * LICENSE file for details.
+ *
+ * also
+ * Copyright (c) 2013 Paul Fox, pgf@foxharp.boston.ma.us
  */
+
 #ifdef _AVR_IOM8_H_
 #define RX_USE_INPUT_CAPTURE_INT 1
 # define SRX     PB0			// ICP on Mega8
@@ -80,3 +84,4 @@ void suart_init(void);
 #define  BAUD    9600
 // #define  BAUD    4800
 
+/* vi: set sw=4 ts=4: */

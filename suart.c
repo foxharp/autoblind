@@ -1,4 +1,3 @@
-/* vi: set sw=4 ts=4: */
 /************************************************************************/
 /*                                                                      */
 /*                      Software UART using T1                          */
@@ -214,3 +213,5 @@ ISR(TIMER1_COMPA_vect, ISR_NOBLOCK)  // time to transmit a bit
 		stx_bits = remaining - 1;	// count down
 	}
 }
+
+/* vi: set sw=4 ts=4: */

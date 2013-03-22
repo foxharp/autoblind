@@ -1,6 +1,5 @@
-/* vi: set sw=4 ts=4: */
 /*
- * Copyright (c) 2012 Paul Fox, pgf@foxharp.boston.ma.us
+ * Copyright (c) 2013 Paul Fox, pgf@foxharp.boston.ma.us
  *
  * Licensed under GPL version 2, see accompanying LICENSE file
  * for details.
@@ -166,3 +165,4 @@ util_init(void)
 #endif
 }
 
+/* vi: set sw=4 ts=4: */

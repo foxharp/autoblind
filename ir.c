@@ -281,3 +281,5 @@ void ir_show_code(void)
     p_hex32(ir_code);
     crnl();
 }
+
+/* vi: set sw=4 ts=4: */

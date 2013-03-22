@@ -1,6 +1,5 @@
-/* vi: set sw=4 ts=4: */
 /*
- * Copyright (c) 2012 Paul Fox, pgf@foxharp.boston.ma.us
+ * Copyright (c) 2013 Paul Fox, pgf@foxharp.boston.ma.us
  *
  * Licensed under GPL version 2, see accompanying LICENSE file
  * for details.
@@ -41,3 +40,7 @@ void util_init(void);
 #define p_dec(n) do { putstr(#n " = ");   putdec16(n); putstr("  "); } while(0)
 #define p_str(s) do { putstr(#s " = '");  putstr(s);   putstr("' "); } while(0)
 #define crnl()	putch('\n');
+
+
+
+/* vi: set sw=4 ts=4: */

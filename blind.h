@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2013 Paul Fox, pgf@foxharp.boston.ma.us
+ *
+ * Licensed under GPL version 2, see accompanying LICENSE file
+ * for details.
+ */
 
 void blind_init(void);
 void blind_ir(void);
@@ -17,3 +23,4 @@ enum {
 
 extern char blind_cmd;
 
+/* vi: set sw=5 ts=4: */

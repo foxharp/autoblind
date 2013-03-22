@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2011,2013 Paul Fox, pgf@foxharp.boston.ma.us
+ *
+ * Licensed under GPL version 2, see accompanying LICENSE file
+ * for details.
+ */
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -490,3 +496,5 @@ void blind_process(void)
 	break;
     }
 }
+
+/* vi: set sw=4 ts=4: */

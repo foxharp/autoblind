@@ -1,4 +1,3 @@
-/* vi: set sw=4 ts=4: */
 /*
  * Copyright (c) 2011,2013 Paul Fox, pgf@foxharp.boston.ma.us
  *
@@ -69,3 +68,5 @@ int main()
 	}
 
 }
+
+/* vi: set sw=4 ts=4: */

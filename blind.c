@@ -40,6 +40,7 @@ static char blind_cur, blind_next;
 
 static int pulses;
 static int pulsegoal;
+static int ignore_limit;
 static int top_stop;
 static int bottom_stop;
 int get_pulses(void);
@@ -116,7 +117,7 @@ void blind_init(void)
 
     zero_pulses();
     
-    pulsegoal = 300;
+    pulsegoal = inch_to_pulse(10);
 
     top_stop = NOMINAL_PEAK;
     bottom_stop = -10000;
@@ -230,12 +231,15 @@ void blind_state(void)
 	if (blind_next == BLIND_RISING) {
 	    start_moving_up();
 	    blind_cur = BLIND_RISING;
+	    ignore_limit = inch_to_pulse(2);
 	    pulsegoal = top_stop;
 	}
 	break;
 
     case BLIND_RISING:
-	if (at_limit()) {  // surprising
+	if (ignore_limit)
+	    ignore_limit--;
+	if (at_limit() && !ignore_limit) {
 	    stop_moving();
 	    zero_pulses();
 	    blind_cur = BLIND_AT_LIMIT;

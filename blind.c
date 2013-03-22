@@ -56,8 +56,7 @@ void zero_pulses(void);
 char blind_cmd;
 
 /* I/O -- read the limit switch, control the motors */
-void
-set_motion(int on)
+void set_motion(int on)
 {
     /* set motor run state bit */
     if (on)
@@ -66,15 +65,13 @@ set_motion(int on)
 	PORTMOTOR &= ~bit(P_MOTOR_ON);
 }
 
-char
-get_motion(void)
+char get_motion(void)
 {
     /* get on/off bit */
     return !!(PINMOTOR & bit(P_MOTOR_ON));
 }
 
-void
-set_direction(int cw)
+void set_direction(int cw)
 {
     /* set rotation bit */
     if (cw)
@@ -83,8 +80,7 @@ set_direction(int cw)
 	PORTMOTOR &= ~bit(P_MOTOR_DIR);
 }
 
-char
-get_direction(void)
+char get_direction(void)
 {
     /* get rotation bit */
     return !!(PINMOTOR & bit(P_MOTOR_DIR));
@@ -104,8 +100,7 @@ char at_limit(void)
  * 
  */
 
-void
-blind_init(void)
+void blind_init(void)
 {
     PORTMOTOR &= ~(bit(P_MOTOR_ON) | bit(P_MOTOR_DIR));
     DDRMOTOR |= bit(P_MOTOR_ON) | bit(P_MOTOR_DIR);
@@ -127,16 +122,14 @@ blind_init(void)
     bottom_stop = -10000;
 }
 
-void
-stop_moving(void)
+void stop_moving(void)
 {
     putstr("stop_moving\n");
     motor_next = MOTOR_STOPPED;
 }
 
 #if 0
-void
-start_moving(void)
+void start_moving(void)
 {
     putstr("start_moving");
     if (cur_rotation == SET_CW) {
@@ -149,15 +142,13 @@ start_moving(void)
 }
 #endif
 
-void
-start_moving_up(void)
+void start_moving_up(void)
 {
     putstr("start moving up");
     motor_next = MOTOR_CW;
 }
 
-void
-start_moving_down(void)
+void start_moving_down(void)
 {
     putstr("start moving down");
     motor_next = MOTOR_CCW;
@@ -403,8 +394,7 @@ void blind_ir(void)
     }
 }
 
-char
-blind_get_cmd()
+char blind_get_cmd()
 {
     char cmd;
 

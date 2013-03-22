@@ -45,13 +45,16 @@ enum {
 
 static char blind_cur, blind_next;
 
-static int pulses;
-static int pulsegoal;
+static int goal;
 static int ignore_limit;
-static int top_stop;
-static int bottom_stop;
-int get_pulses(void);
-void zero_pulses(void);
+int get_position(void);
+void zero_position(void);
+
+struct blind_config {
+    int top_stop;
+    int bottom_stop;
+    int position;
+} blc[1];
 
 #define NOMINAL_PEAK 200
 
@@ -122,12 +125,12 @@ void blind_init(void)
     cur_rotation = SET_CW;
     set_direction(SET_CW);
 
-    zero_pulses();
+    zero_position();
     
-    pulsegoal = inch_to_pulse(10);
+    goal = inch_to_pulse(10);
 
-    top_stop = NOMINAL_PEAK;
-    bottom_stop = -10000;
+    blc->top_stop = NOMINAL_PEAK;
+    blc->bottom_stop = -10000;
 }
 
 void stop_moving(void)
@@ -198,12 +201,12 @@ void blind_state(void)
 #if 0
 	if (at_limit()) {
 	    stop_moving();
-	    zero_pulses();
+	    zero_position();
 	    blind_cur = BLIND_AT_LIMIT;
-	} else if (get_pulses() >= top_stop) {
+	} else if (get_position() >= blc->top_stop) {
 	    stop_moving();
 	    blind_cur = BLIND_AT_TOP_STOP;
-	} else if (get_pulses() <= bottom_stop) {
+	} else if (get_position() <= blc->bottom_stop) {
 	    stop_moving();
 	    blind_cur = BLIND_AT_BOTTOM_STOP;
 	} else
@@ -211,24 +214,24 @@ void blind_state(void)
 	if (blind_next == BLIND_RISING) {
 	    start_moving_up();
 	    blind_cur = BLIND_RISING;
-	    pulsegoal = top_stop;
+	    goal = blc->top_stop;
 	} else if (blind_next == BLIND_FALLING) {
 	    start_moving_down();
 	    blind_cur = BLIND_FALLING;
-	    pulsegoal = bottom_stop;
+	    goal = blc->bottom_stop;
 	}
 	break;
 
     case BLIND_FALLING:
 	if (at_limit()) {
 	    stop_moving();
-	    zero_pulses();
+	    zero_position();
 	    blind_cur = BLIND_AT_LIMIT;
 	} else if (blind_next == BLIND_RISING) {
 	    start_moving_up();
 	    blind_cur = BLIND_RISING;
-	    pulsegoal = top_stop;
-	} else if (get_pulses() == pulsegoal) {
+	    goal = blc->top_stop;
+	} else if (get_position() == goal) {
 	    stop_moving();
 	    blind_cur = BLIND_AT_BOTTOM_STOP;
 	}
@@ -239,7 +242,7 @@ void blind_state(void)
 	    start_moving_up();
 	    blind_cur = BLIND_RISING;
 	    ignore_limit = inch_to_pulse(2);
-	    pulsegoal = top_stop;
+	    goal = blc->top_stop;
 	}
 	break;
 
@@ -248,13 +251,13 @@ void blind_state(void)
 	    ignore_limit--;
 	if (at_limit() && !ignore_limit) {
 	    stop_moving();
-	    zero_pulses();
+	    zero_position();
 	    blind_cur = BLIND_AT_LIMIT;
 	} else if (blind_next == BLIND_FALLING) {
 	    start_moving_down();
 	    blind_cur = BLIND_FALLING;
-	    pulsegoal = bottom_stop;
-	} else if (get_pulses() == pulsegoal) {
+	    goal = blc->bottom_stop;
+	} else if (get_position() == goal) {
 	    stop_moving();
 	    blind_cur = BLIND_AT_TOP_STOP;
 	}
@@ -264,11 +267,11 @@ void blind_state(void)
 	if (blind_next == BLIND_FALLING) {
 	    start_moving_down();
 	    blind_cur = BLIND_FALLING;
-	    pulsegoal = bottom_stop;
+	    goal = blc->bottom_stop;
 	} else if (blind_next == BLIND_FORCE_RISING) {
 	    start_moving_up();
 	    blind_cur = BLIND_RISING;
-	    pulsegoal = top_stop + inch_to_pulse(6);
+	    goal = blc->top_stop + inch_to_pulse(6);
 	}
 	break;
 
@@ -276,11 +279,11 @@ void blind_state(void)
 	if (blind_next == BLIND_RISING) {
 	    start_moving_up();
 	    blind_cur = BLIND_RISING;
-	    pulsegoal = top_stop;
+	    goal = blc->top_stop;
 	} else if (blind_next == BLIND_FORCE_FALLING) {
 	    start_moving_down();
 	    blind_cur = BLIND_FALLING;
-	    pulsegoal = bottom_stop - inch_to_pulse(3);
+	    goal = blc->bottom_stop - inch_to_pulse(3);
 	}
 	break;
 
@@ -361,26 +364,26 @@ void motor_state(void)
 ISR(INT1_vect)		// rotation pulse
 {
     if (get_direction())
-	pulses++;
+	blc->position++;
     else
-	pulses--;
+	blc->position--;
 }
 
-int get_pulses(void)
+int get_position(void)
 {
     int p;
 
     cli();
-    p = pulses;
+    p = blc->position;
     sei();
 
     return p;
 }
 
-void zero_pulses(void)
+void zero_position(void)
 {
     cli();
-    pulses = 0;
+    blc->position = 0;
     sei();
 }
 
@@ -452,11 +455,11 @@ void blind_process(void)
 	break;
 
     case BL_SET_TOP:
-	top_stop = get_pulses();
+	blc->top_stop = get_position();
 	break;
 
     case BL_SET_BOTTOM:
-	bottom_stop = get_pulses();
+	blc->bottom_stop = get_position();
 	break;
 
     case BL_FORCE_UP:

@@ -22,51 +22,51 @@ volatile byte mcusr_mirror;
 
 void hardware_setup(void)
 {
-	mcusr_mirror = MCUSR;
-	MCUSR = 0;
-	wdt_disable();
+    mcusr_mirror = MCUSR;
+    MCUSR = 0;
+    wdt_disable();
 
-	// eliminate div-by-8 (no-op if 'div by 8' clock fuse not programmed)
-	CLKPR = bit(CLKPCE);
-	CLKPR = 0;
+    // eliminate div-by-8 (no-op if 'div by 8' clock fuse not programmed)
+    CLKPR = bit(CLKPCE);
+    CLKPR = 0;
 
-	// disable analog comparator -- saves power
-	ACSRA = bit(ACD);
+    // disable analog comparator -- saves power
+    ACSRA = bit(ACD);
 
 }
 
 int main()
 {
-	init_debug();
-	init_led();
-	blinky();
+    init_debug();
+    init_led();
+    blinky();
 
-	hardware_setup();
+    hardware_setup();
 
-	util_init();
-	init_timer();
-	suart_init();
-	ir_init();
-	blind_init();
+    util_init();
+    init_timer();
+    suart_init();
+    ir_init();
+    blind_init();
 
-	sei();
+    sei();
 
-	if (do_debug()) do_debug_out();   // no return
+    if (do_debug()) do_debug_out();   // no return
 
-	wdt_enable(WDTO_4S);
+    wdt_enable(WDTO_4S);
 
 
-	while (1) {
-		wdt_reset();
+    while (1) {
+        wdt_reset();
 #ifndef NO_MONITOR
-		monitor();
+        monitor();
 #endif
-		led_handle();
-		ir_process();
+        led_handle();
+        ir_process();
 
-		blind_process();
-	}
+        blind_process();
+    }
 
 }
 
-/* vi: set sw=4 ts=4: */
+// vile:noti:sw=4

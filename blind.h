@@ -23,4 +23,4 @@ enum {
 
 extern char blind_cmd;
 
-/* vi: set sw=5 ts=4: */
+// vile:noti:sw=4

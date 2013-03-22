@@ -15,4 +15,4 @@ char get_ir(void);
 extern char ir_code_avail;
 #define ir_avail()  (ir_code_avail)
 
-/* vi: set sw=4 ts=4: */
+// vile:noti:sw=4

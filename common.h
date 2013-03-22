@@ -30,4 +30,4 @@ void putstr(const char *s);
 void force_reboot(void);
 
 
-/* vi: set sw=4 ts=4: */
+// vile:noti:sw=4

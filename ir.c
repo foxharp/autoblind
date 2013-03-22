@@ -39,12 +39,12 @@
  * GPIO usage.  the input needs to come from a pin with a timer
  * "input compare" function.
  */
-#define IR_PORT		PORTA
-#define IR_PIN		PINA
-#define IR_BIT		PA4   // input:  from IR receiver
+#define IR_PORT         PORTA
+#define IR_PIN          PINA
+#define IR_BIT          PA4   // input:  from IR receiver
 
 /* hardware access macro */
-#define IR_high()	(IR_PIN & bit(IR_BIT))
+#define IR_high()       (IR_PIN & bit(IR_BIT))
 
 // prescaler values for TCCR0B
 #define CLKDIV_8    2
@@ -107,14 +107,13 @@ word ir_pulse[MAX_PULSES];  // there's a header on the front
 void
 ir_init(void)
 {
-
     // enable pullup on IR receiver
     IR_PORT |= bit(IR_BIT);
 
     // input capture enable, 16 bit mode, and noise canceller
     TCCR0A = bit(ICEN0)|bit(TCW0); // |bit(ICNC0);
 
-    TCCR0B = CLKDIV_256;	// see comments above
+    TCCR0B = CLKDIV_256;        // see comments above
 
     // start the timer
     TCNT0H = 0;
@@ -173,65 +172,65 @@ ir_process(void)
 
     while (pulse_length) {
 
-	cli();
-	// capture length, polarity, and overflow data with interrupts off
-	len = pulse_length;
-	low = pulse_is_low;
-	overflow = had_overflow;
+        cli();
+        // capture length, polarity, and overflow data with interrupts off
+        len = pulse_length;
+        low = pulse_is_low;
+        overflow = had_overflow;
 
-	had_overflow = 0;
-	pulse_length = 0;
+        had_overflow = 0;
+        pulse_length = 0;
 
-	sei();
+        sei();
 
-	len *= usec_per_tick;  // ticks -> usec
+        len *= usec_per_tick;  // ticks -> usec
 
-	// led_flash();
-	if (overflow || len > 10000) {
-	    // if we had an overflow, then the current pulse_length
-	    // is meaningless -- it's just the last remnant of a
-	    // long gap.
-	    ir_i = 0;
-	    ir_accum = 0;
-	    lastlen = 0;
-	    continue;
-	} 
-	
-	// there's a header of low/high of about 4500usec each
-	if (!low &&
-	    5000 > len     && len > 4000 &&
-	    5000 > lastlen && lastlen > 4000) {
-	    // it's a header
-	    ir_i = 0;
-	    ir_accum = 0;
-	    lastlen = 0;
-	    continue;
-	}
-	lastlen = len;
-	
-	if (low) {
-	    // i don't care about the low pulses right now.
-	    // for my chosen remote, there's no information in
-	    // them -- the low pulses are just spacers.
-	    continue;
-	} 
+        // led_flash();
+        if (overflow || len > 10000) {
+            // if we had an overflow, then the current pulse_length
+            // is meaningless -- it's just the last remnant of a
+            // long gap.
+            ir_i = 0;
+            ir_accum = 0;
+            lastlen = 0;
+            continue;
+        } 
+        
+        // there's a header of low/high of about 4500usec each
+        if (!low &&
+            5000 > len     && len > 4000 &&
+            5000 > lastlen && lastlen > 4000) {
+            // it's a header
+            ir_i = 0;
+            ir_accum = 0;
+            lastlen = 0;
+            continue;
+        }
+        lastlen = len;
+        
+        if (low) {
+            // i don't care about the low pulses right now.
+            // for my chosen remote, there's no information in
+            // them -- the low pulses are just spacers.
+            continue;
+        } 
 
-	if (ir_i >= MAX_PULSES) { // we've gotten too many bits
-	    continue;
-	}
+        if (ir_i >= MAX_PULSES) { // we've gotten too many bits
+            continue;
+        }
 
-	ir_accum <<= 1;
-	if (len > 1000)  // longer than 1 millisecond?
-	    ir_accum |= 1;
+        ir_accum <<= 1;
+        if (len > 1000)  // longer than 1 millisecond?
+            ir_accum |= 1;
 
 #ifdef PULSE_DEBUG
-	ir_pulse[ir_i++] = len;
+        ir_pulse[ir_i++] = len;
 #endif
 
-	if (ir_i >= MAX_PULSES) {
-	    ir_code = ir_accum;
-	    ir_code_avail = 1;
-	}
+        if (ir_i >= MAX_PULSES) {
+            ir_code = ir_accum;
+            ir_code_avail = 1;
+        }
     }
 }
 
@@ -239,12 +238,12 @@ ir_process(void)
  * it's a programmable remote, so this just happens to be the
  * current programming.  */
 long ir_remote_code[] = {
-    0xe0e048b7,	    // up (P+)
-    0xe0e008f7,	    // down (P-)
-    0xe0e0d02f,	    // left (V-)
-    0xe0e0e01f,	    // right (V+)
-    0xe0e0f00f,	    // center (mute)
-    0xe0e040bf,	    // power
+    0xe0e048b7,     // up (P+)
+    0xe0e008f7,     // down (P-)
+    0xe0e0d02f,     // left (V-)
+    0xe0e0e01f,     // right (V+)
+    0xe0e0f00f,     // center (mute)
+    0xe0e040bf,     // power
     0
 };
 
@@ -254,15 +253,15 @@ char get_ir(void)
     byte i;
 
     while (1) {
-	if (ir_code_avail) {
-	    for (i = 0; ir_remote_code[i]; i++) {
-		if (ir_code == ir_remote_code[i]) {
-		    ir_code_avail = 0;
-		    return i;
-		}
-	    }
-	    ir_code_avail = 0;
-	}
+        if (ir_code_avail) {
+            for (i = 0; ir_remote_code[i]; i++) {
+                if (ir_code == ir_remote_code[i]) {
+                    ir_code_avail = 0;
+                    return i;
+                }
+            }
+            ir_code_avail = 0;
+        }
     }
 }
 
@@ -271,10 +270,10 @@ void ir_show_code(void)
 #ifdef PULSE_DEBUG
     byte i;
     for (i = 0; i < MAX_PULSES; i++) {
-	puthex(i);
-	putstr("\t");
-	putdec16(ir_pulse[i]);
-	crnl();
+        puthex(i);
+        putstr("\t");
+        putdec16(ir_pulse[i]);
+        crnl();
     }
 #endif
 
@@ -282,4 +281,4 @@ void ir_show_code(void)
     crnl();
 }
 
-/* vi: set sw=4 ts=4: */
+// vile:noti:sw=4

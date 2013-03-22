@@ -143,8 +143,14 @@ void monitor(void)
 	case 'f': // force up
 		blind_cmd = BL_FORCE_UP;
 		break;
-	case 'm': // mark
+	case 'F': // force down
+		blind_cmd = BL_FORCE_DOWN;
+		break;
+	case 'm':
 		blind_cmd = BL_SET_TOP;
+		break;
+	case 'M':
+		blind_cmd = BL_SET_BOTTOM;
 		break;
 
 #if 0
@@ -318,7 +324,7 @@ void monitor(void)
 		putch('\n');
 		break;
 
-	case 's':
+	case 'z':
 		for (i = 0; i < (80 * 20); i++)
 			putch("0123456789abcdef"[(get_ms_timer() / 1000) & 0xf]);	/* last digit of time */
 		putch('\n');

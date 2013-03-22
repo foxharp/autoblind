@@ -28,14 +28,15 @@ static char cur_rotation;
 static char motor_cur, motor_next;
 static long motor_state_timer;
 
-#define BLIND_STOPPED		0
-#define BLIND_FALLING		1
-#define BLIND_AT_LIMIT		2
-#define BLIND_RISING		3
-#define BLIND_AT_TOP_STOP	4
-#define BLIND_AT_BOTTOM_STOP	5
-#define BLIND_FORCE_RISING	6
-#define BLIND_FORCE_FALLING	7
+#define BLIND_STOPPED          0
+#define BLIND_FALLING          1
+#define BLIND_AT_LIMIT         2
+#define BLIND_RISING           3
+#define BLIND_AT_TOP_STOP      4
+#define BLIND_AT_BOTTOM_STOP   5
+#define BLIND_FORCE_RISING     6
+#define BLIND_FORCE_FALLING    7
+
 static char blind_cur, blind_next;
 
 static int pulses;
@@ -277,6 +278,11 @@ void blind_state(void)
 	}
 	break;
 
+    case BLIND_FORCE_FALLING:
+    case BLIND_FORCE_RISING:
+	/* can't happen */
+	break;
+
     }
 
 }
@@ -443,8 +449,16 @@ void blind_process(void)
 	top_stop = get_pulses();
 	break;
 
+    case BL_SET_BOTTOM:
+	bottom_stop = get_pulses();
+	break;
+
     case BL_FORCE_UP:
 	blind_next = BLIND_FORCE_RISING;
+	break;
+
+    case BL_FORCE_DOWN:
+	blind_next = BLIND_FORCE_FALLING;
 	break;
     }
 }

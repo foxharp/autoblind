@@ -32,17 +32,26 @@ static long motor_state_timer;
 #define BLIND_FALLING		1
 #define BLIND_AT_LIMIT		2
 #define BLIND_RISING		3
-#define BLIND_AT_PEAK		4
-#define BLIND_FORCE_RISING	5
+#define BLIND_AT_TOP_STOP	4
+#define BLIND_AT_BOTTOM_STOP	5
+#define BLIND_FORCE_RISING	6
+#define BLIND_FORCE_FALLING	7
 static char blind_cur, blind_next;
 
 static int pulses;
 static int pulsegoal;
 static int top_stop;
+static int bottom_stop;
 int get_pulses(void);
 void zero_pulses(void);
 
 #define NOMINAL_PEAK 200
+
+// inches = pulses * diameter * pi
+// pulses = inches / (diameter * pi)
+// pulses = in / ( 3.15 * .2)
+// pulses = in / .63 
+#define inch_to_pulse(in)  (100 * (in) / 63)
 
 char blind_cmd;
 
@@ -55,6 +64,13 @@ set_motion(int on)
 	PORTMOTOR |= bit(P_MOTOR_ON);
     else
 	PORTMOTOR &= ~bit(P_MOTOR_ON);
+}
+
+char
+get_motion(void)
+{
+    /* get on/off bit */
+    return !!(PINMOTOR & bit(P_MOTOR_ON));
 }
 
 void
@@ -74,7 +90,7 @@ get_direction(void)
     return !!(PINMOTOR & bit(P_MOTOR_DIR));
 }
 
-int at_limit(void)
+char at_limit(void)
 {
     /* detect the limit switch */
     return !!(PINMOTOR & bit(P_LIMIT));
@@ -108,6 +124,7 @@ blind_init(void)
     pulsegoal = 300;
 
     top_stop = NOMINAL_PEAK;
+    bottom_stop = -10000;
 }
 
 void
@@ -175,20 +192,31 @@ void blind_state(void)
 
     switch (blind_cur) {
     case BLIND_STOPPED:
+	if (get_motion()) {
+	    putstr("failsafe STOP\n");
+	    set_motion(0);
+	}
+#if 0
 	if (at_limit()) {
 	    stop_moving();
 	    zero_pulses();
 	    blind_cur = BLIND_AT_LIMIT;
 	} else if (get_pulses() >= top_stop) {
 	    stop_moving();
-	    blind_cur = BLIND_AT_PEAK;
-	} else if (blind_next == BLIND_RISING) {
+	    blind_cur = BLIND_AT_TOP_STOP;
+	} else if (get_pulses() <= bottom_stop) {
+	    stop_moving();
+	    blind_cur = BLIND_AT_BOTTOM_STOP;
+	} else
+#endif
+	if (blind_next == BLIND_RISING) {
 	    start_moving_up();
 	    blind_cur = BLIND_RISING;
 	    pulsegoal = top_stop;
 	} else if (blind_next == BLIND_FALLING) {
 	    start_moving_down();
 	    blind_cur = BLIND_FALLING;
+	    pulsegoal = bottom_stop;
 	}
 	break;
 
@@ -201,6 +229,9 @@ void blind_state(void)
 	    start_moving_up();
 	    blind_cur = BLIND_RISING;
 	    pulsegoal = top_stop;
+	} else if (get_pulses() == pulsegoal) {
+	    stop_moving();
+	    blind_cur = BLIND_AT_BOTTOM_STOP;
 	}
 	break;
 
@@ -216,24 +247,38 @@ void blind_state(void)
 	if (at_limit()) {  // surprising
 	    stop_moving();
 	    zero_pulses();
-	    blind_cur = BLIND_STOPPED;
+	    blind_cur = BLIND_AT_LIMIT;
 	} else if (blind_next == BLIND_FALLING) {
 	    start_moving_down();
 	    blind_cur = BLIND_FALLING;
+	    pulsegoal = bottom_stop;
 	} else if (get_pulses() == pulsegoal) {
 	    stop_moving();
-	    blind_cur = BLIND_AT_PEAK;
+	    blind_cur = BLIND_AT_TOP_STOP;
 	}
 	break;
 
-    case BLIND_AT_PEAK:
+    case BLIND_AT_TOP_STOP:
 	if (blind_next == BLIND_FALLING) {
 	    start_moving_down();
 	    blind_cur = BLIND_FALLING;
+	    pulsegoal = bottom_stop;
 	} else if (blind_next == BLIND_FORCE_RISING) {
 	    start_moving_up();
 	    blind_cur = BLIND_RISING;
-	    pulsegoal = top_stop + 25;
+	    pulsegoal = top_stop + inch_to_pulse(6);
+	}
+	break;
+
+    case BLIND_AT_BOTTOM_STOP:
+	if (blind_next == BLIND_RISING) {
+	    start_moving_up();
+	    blind_cur = BLIND_RISING;
+	    pulsegoal = top_stop;
+	} else if (blind_next == BLIND_FORCE_FALLING) {
+	    start_moving_down();
+	    blind_cur = BLIND_FALLING;
+	    pulsegoal = bottom_stop - inch_to_pulse(3);
 	}
 	break;
 

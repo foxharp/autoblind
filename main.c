@@ -19,12 +19,15 @@
 #include "util.h"
 
 volatile byte mcusr_mirror;
-
-void hardware_setup(void)
+void get_mcusr(void)
 {
     mcusr_mirror = MCUSR;
     MCUSR = 0;
     wdt_disable();
+}
+
+void hardware_setup(void)
+{
 
     // eliminate div-by-8 (no-op if 'div by 8' clock fuse not programmed)
     CLKPR = bit(CLKPCE);
@@ -37,6 +40,7 @@ void hardware_setup(void)
 
 int main()
 {
+    get_mcusr();
     init_debug();
     init_led();
     blinky();

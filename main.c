@@ -51,10 +51,11 @@ int main()
 
     sei();
 
+    blind_read_config();
+
     if (do_debug()) do_debug_out();   // no return
 
     wdt_enable(WDTO_4S);
-
 
     while (1) {
         wdt_reset();

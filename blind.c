@@ -61,7 +61,7 @@ struct blind_config {
     int top_stop;
     int bottom_stop;
     int position;
-    int padding [13];
+    int padding[13];
 } blc[1];
 
 #define NOMINAL_PEAK 200
@@ -115,15 +115,31 @@ void blind_read_config(void)
 {
     int i;
     int *ip;
-    eeprom_read_block(blc, 0, sizeof(blc));
-    for (i = 0, ip = (int *)&blc; i < 16; i++, ip++) {
-        p_hex(i); p_hex(*ip++); crnl();
+
+    eeprom_read_block(blc, 0, sizeof(*blc));
+
+#if 1
+    ip = (int *)blc;
+    for (i = 0; i < 16; i++) {
+	p_hex(i); p_hex(ip[i]); crnl();
     }
+#endif
+
+    // set sensible defaults
+    if (blc->top_stop == 0xffff)
+	blc->top_stop = NOMINAL_PEAK;
+    if (blc->bottom_stop == 0xffff)
+	blc->bottom_stop = -10000;
+    if (blc->position == 0xffff)
+	blc->position = 10;
+
+    // write back any updated values
+    blind_save_config();
 }
 
 void blind_save_config(void)
 {
-    eeprom_update_block(blc, 0, sizeof(blc));
+    eeprom_update_block((void *)blc, (void *)0, sizeof(*blc));
 }
 
 void blind_init(void)
@@ -139,13 +155,6 @@ void blind_init(void)
 
     cur_rotation = SET_CW;
     set_direction(SET_CW);
-
-    blind_read_config();
-
-    if (!blc->top_stop)
-        blc->top_stop = NOMINAL_PEAK;
-    if (!blc->bottom_stop)
-        blc->bottom_stop = -10000;
 
     goal = inch_to_pulse(10);
 }

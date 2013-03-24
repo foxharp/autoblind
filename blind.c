@@ -45,6 +45,7 @@ enum {
     BLIND_DOWN,
     BLIND_FORCE_UP,
     BLIND_FORCE_DOWN,
+    BLIND_TOGGLE,
 };
 static char blind_do;
 
@@ -199,17 +200,15 @@ void start_moving_down(void)
 
 void blind_state(void)
 {
-    if (1)
-    {
-        static char last_blind_is = -1, last_blind_do = -1;
-        if (blind_is != last_blind_is) {
-            p_hex(blind_is);
-            last_blind_is = blind_is;
-        }
-        if (blind_do != last_blind_do) {
-            p_hex(blind_do);
-            last_blind_do = blind_do;
-        }
+    static char last_blind_is = -1, last_blind_do = -1;
+    static char recent_motion;
+    if (blind_is != last_blind_is) {
+        p_hex(blind_is);
+        last_blind_is = blind_is;
+    }
+    if (blind_do != last_blind_do) {
+        p_hex(blind_do);
+        last_blind_do = blind_do;
     }
 
     // make sure this is always honored, and immediately
@@ -249,10 +248,17 @@ void blind_state(void)
             start_moving_down();
             blind_is = BLIND_IS_FALLING;
             goal = blc->bottom_stop;
+        } else if (blind_do == BLIND_TOGGLE) {
+            if (recent_motion == BLIND_IS_RISING) {
+                blind_do = BLIND_DOWN;
+            } else {
+                blind_do = BLIND_UP;
+            }
         }
         break;
 
     case BLIND_IS_FALLING:
+        recent_motion = blind_is;
         if (at_limit()) {
             stop_moving();
             zero_position();
@@ -264,11 +270,14 @@ void blind_state(void)
         } else if (get_position() == goal) {
             stop_moving();
             blind_is = BLIND_IS_AT_BOTTOM_STOP;
+        } else if (blind_do == BLIND_TOGGLE) {
+            blind_do = BLIND_STOP;
         }
         break;
 
     case BLIND_IS_AT_LIMIT:
-        if (blind_do == BLIND_UP) {
+        if (blind_do == BLIND_UP ||
+                blind_do == BLIND_TOGGLE) {
             start_moving_up();
             blind_is = BLIND_IS_RISING;
             ignore_limit = inch_to_pulse(2);
@@ -277,6 +286,7 @@ void blind_state(void)
         break;
 
     case BLIND_IS_RISING:
+        recent_motion = blind_is;
         if (ignore_limit)
             ignore_limit--;
         if (at_limit() && !ignore_limit) {
@@ -290,11 +300,14 @@ void blind_state(void)
         } else if (get_position() == goal) {
             stop_moving();
             blind_is = BLIND_IS_AT_TOP_STOP;
+        } else if (blind_do == BLIND_TOGGLE) {
+            blind_do = BLIND_STOP;
         }
         break;
 
     case BLIND_IS_AT_TOP_STOP:
-        if (blind_do == BLIND_DOWN) {
+        if (blind_do == BLIND_DOWN ||
+                blind_do == BLIND_TOGGLE) {
             start_moving_down();
             blind_is = BLIND_IS_FALLING;
             goal = blc->bottom_stop;
@@ -306,7 +319,8 @@ void blind_state(void)
         break;
 
     case BLIND_IS_AT_BOTTOM_STOP:
-        if (blind_do == BLIND_UP) {
+        if (blind_do == BLIND_UP ||
+                blind_do == BLIND_TOGGLE) {
             start_moving_up();
             blind_is = BLIND_IS_RISING;
             goal = blc->top_stop;
@@ -500,6 +514,10 @@ void blind_process(void)
 
     case BL_FORCE_DOWN:
         blind_do = BLIND_FORCE_DOWN;
+        break;
+
+    case BL_ONE_BUTTON:
+        blind_do = BLIND_TOGGLE;
         break;
     }
 }

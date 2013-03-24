@@ -9,6 +9,7 @@ void blind_init(void);
 void blind_ir(void);
 void blind_process(void);
 void blind_save_config(void);
+void blind_read_config(void);
 void blind_set_position(int n);
 
 enum {
@@ -19,6 +20,7 @@ enum {
     BL_SET_BOTTOM,
     BL_FORCE_UP,
     BL_FORCE_DOWN,
+    BL_ONE_BUTTON,
 };
 
 extern char blind_cmd;

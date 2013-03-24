@@ -38,6 +38,7 @@ enum {
 };
 static char motor_cur, motor_next;
 static long motor_state_timer;
+static long position_change_timer;
 
 enum {
     BLIND_STOP,
@@ -146,6 +147,7 @@ void blind_read_config(void)
 
 void blind_save_config(void)
 {
+    putstr("update eeprom\n");
     eeprom_update_block((void *)blc, (void *)0, sizeof(*blc));
 }
 
@@ -352,6 +354,13 @@ void motor_state(void)
         }
     }
 
+    // save current position 30 seconds after it stops changing
+    if (position_change_timer &&
+            check_timer(position_change_timer, 30 * 1000)) {
+        blind_save_config();
+        position_change_timer = 0;
+    }
+
     if (motor_next == MOTOR_REVERSE) {
         switch (motor_cur) {
         case MOTOR_CCW:     motor_next = MOTOR_CW;  break;
@@ -359,6 +368,7 @@ void motor_state(void)
         case MOTOR_STOPPED: motor_next = MOTOR_STOPPED; break;
         }
     }
+
 
     if (motor_state_timer && !check_timer (motor_state_timer, 200)) {
             return;
@@ -405,6 +415,8 @@ ISR(INT1_vect)          // rotation pulse
         blc->position++;
     else
         blc->position--;
+
+    position_change_timer = get_ms_timer();
 }
 
 int get_position(void)

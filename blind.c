@@ -56,7 +56,7 @@ enum {
     BLIND_IS_AT_BOTTOM_STOP,
     BLIND_IS_AT_LIMIT,
 };
-static char blind_cur;
+static char blind_is;
 
 static int goal;
 static int ignore_limit;
@@ -201,10 +201,10 @@ void blind_state(void)
 {
     if (1)
     {
-        static char last_blind_cur = -1, last_blind_do = -1;
-        if (blind_cur != last_blind_cur) {
-            p_hex(blind_cur);
-            last_blind_cur = blind_cur;
+        static char last_blind_is = -1, last_blind_do = -1;
+        if (blind_is != last_blind_is) {
+            p_hex(blind_is);
+            last_blind_is = blind_is;
         }
         if (blind_do != last_blind_do) {
             p_hex(blind_do);
@@ -215,14 +215,14 @@ void blind_state(void)
     // make sure this is always honored, and immediately
     if (blind_do == BLIND_STOP) {
         stop_moving();
-        blind_cur = BLIND_IS_STOPPED;
+        blind_is = BLIND_IS_STOPPED;
         return;
     }
 
     if (motor_state_timer) // no changes while the motor is settling
         return;
 
-    switch (blind_cur) {
+    switch (blind_is) {
     case BLIND_IS_STOPPED:
         if (get_motion()) {
             putstr("failsafe STOP\n");
@@ -232,22 +232,22 @@ void blind_state(void)
         if (at_limit()) {
             stop_moving();
             zero_position();
-            blind_cur = BLIND_IS_AT_LIMIT;
+            blind_is = BLIND_IS_AT_LIMIT;
         } else if (get_position() >= blc->top_stop) {
             stop_moving();
-            blind_cur = BLIND_IS_AT_TOP_STOP;
+            blind_is = BLIND_IS_AT_TOP_STOP;
         } else if (get_position() <= blc->bottom_stop) {
             stop_moving();
-            blind_cur = BLIND_IS_AT_BOTTOM_STOP;
+            blind_is = BLIND_IS_AT_BOTTOM_STOP;
         } else
 #endif
         if (blind_do == BLIND_UP) {
             start_moving_up();
-            blind_cur = BLIND_IS_RISING;
+            blind_is = BLIND_IS_RISING;
             goal = blc->top_stop;
         } else if (blind_do == BLIND_DOWN) {
             start_moving_down();
-            blind_cur = BLIND_IS_FALLING;
+            blind_is = BLIND_IS_FALLING;
             goal = blc->bottom_stop;
         }
         break;
@@ -256,21 +256,21 @@ void blind_state(void)
         if (at_limit()) {
             stop_moving();
             zero_position();
-            blind_cur = BLIND_IS_AT_LIMIT;
+            blind_is = BLIND_IS_AT_LIMIT;
         } else if (blind_do == BLIND_UP) {
             start_moving_up();
-            blind_cur = BLIND_IS_RISING;
+            blind_is = BLIND_IS_RISING;
             goal = blc->top_stop;
         } else if (get_position() == goal) {
             stop_moving();
-            blind_cur = BLIND_IS_AT_BOTTOM_STOP;
+            blind_is = BLIND_IS_AT_BOTTOM_STOP;
         }
         break;
 
     case BLIND_IS_AT_LIMIT:
         if (blind_do == BLIND_UP) {
             start_moving_up();
-            blind_cur = BLIND_IS_RISING;
+            blind_is = BLIND_IS_RISING;
             ignore_limit = inch_to_pulse(2);
             goal = blc->top_stop;
         }
@@ -282,25 +282,25 @@ void blind_state(void)
         if (at_limit() && !ignore_limit) {
             stop_moving();
             zero_position();
-            blind_cur = BLIND_IS_AT_LIMIT;
+            blind_is = BLIND_IS_AT_LIMIT;
         } else if (blind_do == BLIND_DOWN) {
             start_moving_down();
-            blind_cur = BLIND_IS_FALLING;
+            blind_is = BLIND_IS_FALLING;
             goal = blc->bottom_stop;
         } else if (get_position() == goal) {
             stop_moving();
-            blind_cur = BLIND_IS_AT_TOP_STOP;
+            blind_is = BLIND_IS_AT_TOP_STOP;
         }
         break;
 
     case BLIND_IS_AT_TOP_STOP:
         if (blind_do == BLIND_DOWN) {
             start_moving_down();
-            blind_cur = BLIND_IS_FALLING;
+            blind_is = BLIND_IS_FALLING;
             goal = blc->bottom_stop;
         } else if (blind_do == BLIND_FORCE_UP) {
             start_moving_up();
-            blind_cur = BLIND_IS_RISING;
+            blind_is = BLIND_IS_RISING;
             goal = blc->top_stop + inch_to_pulse(6);
         }
         break;
@@ -308,11 +308,11 @@ void blind_state(void)
     case BLIND_IS_AT_BOTTOM_STOP:
         if (blind_do == BLIND_UP) {
             start_moving_up();
-            blind_cur = BLIND_IS_RISING;
+            blind_is = BLIND_IS_RISING;
             goal = blc->top_stop;
         } else if (blind_do == BLIND_FORCE_DOWN) {
             start_moving_down();
-            blind_cur = BLIND_IS_FALLING;
+            blind_is = BLIND_IS_FALLING;
             goal = blc->bottom_stop - inch_to_pulse(3);
         }
         break;

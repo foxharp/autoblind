@@ -247,15 +247,15 @@ void monitor(void)
 #endif
 
     case 'w':
-        addr = gethex();
+        addr = n;
         n = gethex();
         *(unsigned char *) addr = n;
         break;
 
-    case 'x':                   //  read 1 byte from xdata
-    case 'X':                   //  read 1 byte from data
-        addr = gethex();
-        addr_is_data = (cmd == 'd');
+    case 'x':                   //  read 1 byte of data
+    case 'X':                   //  read 1 byte of code
+        addr = n;
+        addr_is_data = (cmd == 'x');
         // fallthrough
 
     case '=':

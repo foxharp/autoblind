@@ -41,7 +41,7 @@ static long motor_state_timer;
 static long position_change_timer;
 
 enum {
-    BLIND_STOP,
+    BLIND_STOP = 0,
     BLIND_UP,
     BLIND_DOWN,
     BLIND_FORCE_UP,
@@ -120,16 +120,17 @@ char at_limit(void)
 void blind_read_config(void)
 {
     int i;
-    int *ip;
 
     eeprom_read_block(blc, 0, sizeof(*blc));
 
-#if 1
-    ip = (int *)blc;
-    for (i = 0; i < sizeof(*blc)/sizeof(int); i++) {
-	p_hex(i); p_hex(ip[i]); crnl();
+    if (1) {
+        int *ip;
+        ip = (int *)blc;
+        crnl();
+        for (i = 0; i < sizeof(*blc)/sizeof(int); i++) {
+	    p_hex(i); p_hex(ip[i]); crnl();
+        }
     }
-#endif
 
     // set sensible defaults
     if (blc->top_stop == 0xffff)
@@ -238,7 +239,7 @@ static void start_moving_down(void)
 
 static void blind_state(void)
 {
-    static char last_blind_is = -1, last_blind_do = -1;
+    static char last_blind_is, last_blind_do;
     static char recent_motion;
     if (blind_is != last_blind_is) {
         p_hex(blind_is);
@@ -381,7 +382,7 @@ static void motor_state(void)
 
     if (1)
     {
-        static char last_motor_cur = -1, last_motor_next = -1;
+        static char last_motor_cur, last_motor_next;
         if (motor_cur != last_motor_cur) {
             p_hex(motor_cur);
             last_motor_cur = motor_cur;

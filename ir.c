@@ -33,7 +33,7 @@
 #include "common.h"
 #include "util.h"
 
-#define PULSE_DEBUG 1
+// #define PULSE_DEBUG 1
 
 /*
  * GPIO usage.  the input needs to come from a pin with a timer

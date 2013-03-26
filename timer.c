@@ -90,7 +90,7 @@ long get_ms_timer(void)
     return ms;
 }
 
-unsigned char check_timer(long base, int duration)
+unsigned char check_timer(long base, long duration)
 {
     return get_ms_timer() > (base + duration);
 }

@@ -9,7 +9,7 @@
 
 void init_timer(void);
 long get_ms_timer(void);
-unsigned char check_timer(long time0, int duration);
+unsigned char check_timer(long time0, long duration);
 void print_tstamp(void);
 
 #if F_CPU == 8000000

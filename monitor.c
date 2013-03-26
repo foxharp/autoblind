@@ -130,6 +130,7 @@ void monitor(void)
     case '\0':
         break;
 
+#if 0
     case 'u': // up
         blind_cmd = BL_GO_UP;
         break;
@@ -153,6 +154,7 @@ void monitor(void)
         blind_set_position(n);
         blind_cmd = BL_SET_BOTTOM;
         break;
+#endif
 
     case 'B':
         blind_save_config();

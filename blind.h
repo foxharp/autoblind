@@ -23,6 +23,6 @@ enum {
     BL_ONE_BUTTON,
 };
 
-extern char blind_cmd;
+// extern char blind_cmd;
 
 // vile:noti:sw=4

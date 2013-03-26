@@ -359,7 +359,7 @@ void motor_state(void)
 
     // save current position 30 seconds after it stops changing
     if (position_change_timer &&
-            check_timer(position_change_timer, 30 * 1000)) {
+            check_timer(position_change_timer, (long)30*1000*1000)) {
         blind_save_config();
         position_change_timer = 0;
     }

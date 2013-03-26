@@ -43,6 +43,15 @@ CFLAGS += -Wa,-adhlns=$(<:%.c=%.lst)
 CFLAGS += -DPROGRAM_VERSION="\"$(PROG)-$(VERSION)\""
 LFLAGS = -mmcu=$(MCU)
 
+# NOTE!  the next two assignments cause a) all initialized data
+# to live forever in flash (i.e., be read-only), and b) all
+# strings will need to be printed using pgm_read_byte().  of
+# course, this applies to all other initialized data as well:  so
+# declaring "int foo = 45;" and then trying to access 'foo'
+# normally won't work.
+CFLAGS += -DALL_STRINGS_PROGMEM
+LFLAGS += -T avr25.x.data_in_flash
+
 HOSTCC = gcc
 
 all: $(PROG).hex $(PROG).lss

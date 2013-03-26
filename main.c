@@ -18,6 +18,12 @@
 #include "blind.h"
 #include "util.h"
 
+#if ALL_STRINGS_PROGMEM
+// override default __do_copy_data(), since we build with
+// a linker script that leaves data in flash.
+void __do_copy_data(void) { }
+#endif
+
 volatile byte mcusr_mirror;
 void get_mcusr(void)
 {

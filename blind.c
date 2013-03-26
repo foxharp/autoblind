@@ -147,6 +147,7 @@ void blind_read_config(void)
 
 void blind_save_config(void)
 {
+    putstr("saving config\n");
 #ifdef LATER
     eeprom_update_block((void *)blc, (void *)0, sizeof(*blc));
 #endif

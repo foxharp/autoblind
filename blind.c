@@ -69,7 +69,7 @@ struct blind_config {
     int top_stop;
     int bottom_stop;
     int position;
-    int padding[13];
+    int padding[5];
 } blc[1];
 
 #define NOMINAL_PEAK 200

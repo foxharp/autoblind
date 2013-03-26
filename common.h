@@ -14,18 +14,6 @@ typedef uint8_t byte;
 #define bit(x) _BV(x)
 
 void monitor(void);
-void puthex(unsigned char i);
-void puthex16(unsigned int i);
-void puthex32(long l);
-
-unsigned char getch(void);
-void putch(char c);
-void putstr_p(const prog_char * s);
-#if ! ALL_STRINGS_PROGMEM
-void putstr(const char *s);
-#else
-#define putstr(s) putstr_p(PSTR(s))
-#endif
 
 void force_reboot(void);
 

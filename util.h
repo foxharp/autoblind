@@ -4,6 +4,9 @@
  * Licensed under GPL version 2, see accompanying LICENSE file
  * for details.
  */
+
+#include "suart.h"   // for putch()/getch()
+
 void puthex(unsigned char i);
 void puthex16(unsigned int i);
 void puthex32(long l);
@@ -14,7 +17,7 @@ void putstr_p(const prog_char * s);
 #if ! ALL_STRINGS_PROGMEM
 void putstr(const char *s);
 #else
-#define putstr(s) putstr_p(PSTR(s))
+#define putstr(s) putstr_p(s)
 #endif
 void init_led(void);
 void led_handle(void);

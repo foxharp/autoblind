@@ -197,9 +197,11 @@ void monitor(void)
         wdt_disable();
         while (1) {
             cmd = getch();
+            if (cmd == 3) break;  // ctrl-C
             if (cmd == '\r') cmd = '\n';
             putch(cmd);
         }
+        break;
 
     case 't':
         {

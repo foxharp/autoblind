@@ -237,7 +237,7 @@ ir_process(void)
 /* codes for my X10 "TV buddy" bottle-opener remote turns out
  * it's a programmable remote, so this just happens to be the
  * current programming.  */
-long ir_remote_code[] = {
+long ir_remote_codes[] PROGMEM = {
     0xe0e048b7,     // up (P+)
     0xe0e008f7,     // down (P-)
     0xe0e0d02f,     // left (V-)
@@ -250,17 +250,25 @@ long ir_remote_code[] = {
 // wait for an IR press, and return an index into the table above
 char get_ir(void)
 {
-    byte i;
+    long *ircp;
+    long irc;
 
     while (1) {
         if (ir_code_avail) {
-            for (i = 0; ir_remote_code[i]; i++) {
-                if (ir_code == ir_remote_code[i]) {
-                    ir_code_avail = 0;
-                    return i;
-                }
-            }
             ir_code_avail = 0;
+            ircp = ir_remote_codes;
+            while(1) {
+
+                irc = pgm_read_dword(ircp);
+                if (!irc)
+                    break;
+
+                if (ir_code == irc) {
+                    return ircp - ir_remote_codes;
+                }
+
+                ircp++;
+            }
         }
     }
 }

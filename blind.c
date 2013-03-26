@@ -128,7 +128,7 @@ void blind_read_config(void)
 
 #if 1
     ip = (int *)blc;
-    for (i = 0; i < 16; i++) {
+    for (i = 0; i < sizeof(*blc)/sizeof(int); i++) {
 	p_hex(i); p_hex(ip[i]); crnl();
     }
 #endif
@@ -147,7 +147,6 @@ void blind_read_config(void)
 
 void blind_save_config(void)
 {
-    putstr("update eeprom\n");
     eeprom_update_block((void *)blc, (void *)0, sizeof(*blc));
 }
 
@@ -215,8 +214,10 @@ void blind_state(void)
 
     // make sure this is always honored, and immediately
     if (blind_do == BLIND_STOP) {
-        stop_moving();
-        blind_is = BLIND_IS_STOPPED;
+        if (get_motion()) {
+            stop_moving();
+            blind_is = BLIND_IS_STOPPED;
+        }
         return;
     }
 
@@ -453,7 +454,6 @@ void blind_ir(void)
         return;
 
     cmd = get_ir();
-    puthex(cmd); crnl();
 
     switch (cmd) {
     case 0: // up
@@ -471,7 +471,7 @@ void blind_ir(void)
     }
 }
 
-char blind_get_cmd()
+char blind_get_cmd(void)
 {
     char cmd;
 

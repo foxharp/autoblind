@@ -6,7 +6,6 @@
  */
 
 void blind_init(void);
-void blind_ir(void);
 void blind_process(void);
 void blind_save_config(void);
 void blind_read_config(void);

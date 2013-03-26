@@ -62,8 +62,6 @@ static char blind_is;
 
 static int goal;
 static int ignore_limit;
-int get_position(void);
-void zero_position(void);
 
 struct blind_config {
     int top_stop;
@@ -83,7 +81,7 @@ struct blind_config {
 char blind_cmd;
 
 /* I/O -- read the limit switch, control the motors */
-void set_motion(int on)
+static void set_motion(int on)
 {
     /* set motor run state bit */
     if (on)
@@ -92,13 +90,13 @@ void set_motion(int on)
         PORTMOTOR &= ~bit(P_MOTOR_ON);
 }
 
-char get_motion(void)
+static char get_motion(void)
 {
     /* get on/off bit */
     return !!(PINMOTOR & bit(P_MOTOR_ON));
 }
 
-void set_direction(int cw)
+static void set_direction(int cw)
 {
     /* set rotation bit */
     if (cw)
@@ -170,14 +168,50 @@ void blind_init(void)
     goal = inch_to_pulse(10);
 }
 
-void stop_moving(void)
+static int get_position(void)
+{
+    int p;
+
+    cli();
+    p = blc->position;
+    sei();
+
+    return p;
+}
+
+/* mainly for debug, for use from monitor */
+void blind_set_position(int p)
+{
+    cli();
+    blc->position = p;
+    sei();
+}
+
+static void zero_position(void)
+{
+    cli();
+    blc->position = 0;
+    sei();
+}
+
+ISR(INT1_vect)          // rotation pulse
+{
+    if (get_direction())
+        blc->position++;
+    else
+        blc->position--;
+
+    position_change_timer = get_ms_timer();
+}
+
+static void stop_moving(void)
 {
     putstr("stop_moving\n");
     motor_next = MOTOR_STOPPED;
 }
 
 #if 0
-void start_moving(void)
+static void start_moving(void)
 {
     putstr("start_moving");
     if (cur_rotation == SET_CW) {
@@ -190,19 +224,19 @@ void start_moving(void)
 }
 #endif
 
-void start_moving_up(void)
+static void start_moving_up(void)
 {
     putstr("start moving up");
     motor_next = MOTOR_CW;
 }
 
-void start_moving_down(void)
+static void start_moving_down(void)
 {
     putstr("start moving down");
     motor_next = MOTOR_CCW;
 }
 
-void blind_state(void)
+static void blind_state(void)
 {
     static char last_blind_is = -1, last_blind_do = -1;
     static char recent_motion;
@@ -340,7 +374,7 @@ void blind_state(void)
 
 }
 
-void motor_state(void)
+static void motor_state(void)
 {
     // ensure we make all direction changes while motor is stopped.
     // ensure we don't restart too soon after stopping.
@@ -413,43 +447,7 @@ void motor_state(void)
     }
 }
 
-ISR(INT1_vect)          // rotation pulse
-{
-    if (get_direction())
-        blc->position++;
-    else
-        blc->position--;
-
-    position_change_timer = get_ms_timer();
-}
-
-int get_position(void)
-{
-    int p;
-
-    cli();
-    p = blc->position;
-    sei();
-
-    return p;
-}
-
-/* mainly for debug, for use from monitor */
-void blind_set_position(int p)
-{
-    cli();
-    blc->position = p;
-    sei();
-}
-
-void zero_position(void)
-{
-    cli();
-    blc->position = 0;
-    sei();
-}
-
-void blind_ir(void)
+static void blind_ir(void)
 {
     char cmd;
 
@@ -474,7 +472,7 @@ void blind_ir(void)
     }
 }
 
-char blind_get_cmd(void)
+static char blind_get_cmd(void)
 {
     char cmd;
 

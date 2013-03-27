@@ -214,7 +214,7 @@ static void stop_moving(void)
 #if 0
 static void start_moving(void)
 {
-    putstr("start_moving");
+    putstr("start_moving\n");
     if (cur_rotation == SET_CW) {
         putstr(" up");
         motor_next = MOTOR_CW;
@@ -227,13 +227,13 @@ static void start_moving(void)
 
 static void start_moving_up(void)
 {
-    putstr("start moving up");
+    putstr("start moving up\n");
     motor_next = MOTOR_CW;
 }
 
 static void start_moving_down(void)
 {
-    putstr("start moving down");
+    putstr("start moving down\n");
     motor_next = MOTOR_CCW;
 }
 

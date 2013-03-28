@@ -87,9 +87,10 @@ static void set_motion(int on)
 {
     if (MOTOR_DEBUG) {
         static int last_on;
-        if (on != last_on)
+        if (on != last_on) {
             p_hex(on);
-        last_on = on;
+            last_on = on;
+        }
     }
 
     /* set motor run state bit */
@@ -109,9 +110,10 @@ static void set_direction(int dir)
 {
     if (MOTOR_DEBUG) {
         static int last_dir;
-        if (dir != last_dir)
+        if (dir != last_dir) {
             p_hex(dir);
-        last_dir = dir;
+            last_dir = dir;
+        }
     }
 
     /* set rotation bit */

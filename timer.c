@@ -69,6 +69,8 @@ ISR(TIMER1_COMPD_vect)
 
     sei();
 
+    tone_cycle();
+
     // approximately 1/second (much cheaper, codewise, than "% 1000")
     if ((milliseconds & 1023) == 0) {
         led_flash();

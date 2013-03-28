@@ -84,34 +84,50 @@ void putstr_p(const prog_char * s)
 }
 
 
-# define DDRLED DDRB
-# define PORTLED PORTB
-# define PINLED PINB
-# define BITLED PB0
-
-#define Led1_On()       do { PORTLED |=  bit(BITLED); } while(0)
-#define Led1_Off()      do { PORTLED &= ~bit(BITLED); } while(0)
-#define Led1_is_On()       ( PINLED  &   bit(BITLED) )
+/*
+ * output signalling:  LED and tone
+ */
 
 static long led_time;
+static long tone_time;
+static int tone_duration;
+char tone_on;
 
 void init_led(void)
 {
     DDRLED |= bit(BITLED);
+    DDRTONE |= bit(BITTONE);
 }
 
 void led_handle(void)
 {
-    if (led_time && Led1_is_On() && check_timer(led_time, 100)) {
-        Led1_Off();
+    /* turn off LED flash */
+    if (led_time && check_timer(led_time, 100)) {
+        Led1_Flip();
         led_time = 0;
     }
+
+    /* silence tone */
+    if (tone_time && check_timer(tone_time, tone_duration)) {
+        tone_on = 0;
+        tone_time = 0;
+        Tone_Off();  // keep the pin low when off
+    }
+
 }
 
 void led_flash(void)
 {
     Led1_On();
     led_time = get_ms_timer();
+    return;
+}
+
+void tone_start(int duration)
+{
+    tone_on = 1;
+    tone_time = get_ms_timer();
+    tone_duration = duration;
     return;
 }
 

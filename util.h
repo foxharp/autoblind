@@ -34,6 +34,33 @@ void blinky(void);
 void do_debug_out(void);
 
 
+/* LED control */
+# define DDRLED DDRB
+# define PORTLED PORTB
+# define PINLED PINB
+# define BITLED PB0
+
+#define Led1_On()       do { PORTLED |=  bit(BITLED); } while(0)
+#define Led1_Off()      do { PORTLED &= ~bit(BITLED); } while(0)
+#define Led1_Flip()     do { PINLED   =  bit(BITLED); } while(0)
+#define Led1_is_On()       ( PINLED   &  bit(BITLED) )
+
+/* tone control */
+# define DDRTONE DDRB
+# define PORTTONE PORTB
+# define PINTONE PINB
+# define BITTONE PB0
+
+#define Tone_On()       do { PORTTONE |=  bit(BITTONE); } while(0)
+#define Tone_Off()      do { PORTTONE &= ~bit(BITTONE); } while(0)
+#define Tone_Flip()     do { PINTONE   =  bit(BITTONE); } while(0)
+#define Tone_is_On()       ( PINTONE  &   bit(BITTONE) )
+#define tone_cycle()    do { if (tone_on) Tone_Flip(); } while(0)
+extern char tone_on;
+void tone_start(int duration);
+#define TONE_CHIRP 100
+#define TONE_CONFIRM 300
+
 void util_init(void);
 
 // these output both names and values.  i.e.,

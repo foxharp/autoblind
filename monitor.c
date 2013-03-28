@@ -207,6 +207,10 @@ void monitor(void)
         break;
 
     case 't':
+        tone_start(n);
+        break;
+
+    case 'T':
         {
             static const char *teststring = "foobar";
             // printf("testing: 0x%x, %s\n", 64, "hello");

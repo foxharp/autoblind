@@ -6,7 +6,7 @@ VERSION = $(shell date +%y%m%d-%H%M)
 
 
 PROG = xostick
-SRCS = main.c ir.c monitor.c util.c timer.c suart.c blind.c
+SRCS = main.c ir.c monitor.c util.c timer.c suart.c blind.c button.c
 HEADERS = $(shell echo *.h)
 
 OBJS = $(subst .c,.o,$(SRCS))

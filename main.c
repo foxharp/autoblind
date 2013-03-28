@@ -16,6 +16,7 @@
 #include "timer.h"
 #include "ir.h"
 #include "blind.h"
+#include "button.h"
 #include "util.h"
 
 #if ALL_STRINGS_PROGMEM
@@ -54,6 +55,7 @@ int main()
     hardware_setup();
 
     util_init();
+    button_init();
     init_timer();
     suart_init();
     ir_init();
@@ -74,6 +76,7 @@ int main()
 #endif
         led_handle();
         ir_process();
+        button_process();
 
         blind_process();
     }

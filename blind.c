@@ -448,6 +448,8 @@ static void motor_state(void)
 static void blind_ir(void)
 {
     char cmd;
+    static long alt_timer;
+    static char alt;
 
     if (!ir_avail())
         return;
@@ -456,18 +458,45 @@ static void blind_ir(void)
 
     switch (cmd) {
     case 0: // up
-            blind_cmd = BL_GO_UP;
+            if (alt_timer && !check_timer(alt_timer, 500)) {
+                if (alt == 1)
+                    blind_cmd = BL_FORCE_UP;
+                else
+                    blind_cmd = BL_SET_TOP;
+                tone_start(TONE_CONFIRM);
+            } else {
+                blind_cmd = BL_GO_UP;
+            }
             break;
+
     case 1: // down
-            blind_cmd = BL_GO_DOWN;
+            if (alt_timer && !check_timer(alt_timer, 500)) {
+                if (alt == 1)
+                    blind_cmd = BL_FORCE_DOWN;
+                else
+                    blind_cmd = BL_SET_BOTTOM;
+                tone_start(TONE_CONFIRM);
+            } else {
+                blind_cmd = BL_GO_DOWN;
+            }
             break;
+
     case 4: // stop  (center)
             blind_cmd = BL_STOP;
             break;
-    case 5: // mark  (power)
-            blind_cmd = BL_SET_TOP;
-            break;
+
+    case 5: // alt  (power)
+            if (alt_timer && !check_timer(alt_timer, 500)) {
+                alt++;
+                tone_start(TONE_CHIRP);
+            } else {
+                alt = 1;
+            }
+            alt_timer = get_ms_timer();
+            return;
     }
+    alt_timer = 0;
+    alt = 0;
 }
 
 static char blind_get_cmd(void)

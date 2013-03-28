@@ -16,6 +16,9 @@
 #include "blind.h"
 #include "ir.h"
 
+#define STATE_DEBUG 1
+#define MOTOR_DEBUG 0
+
 #define PORTMOTOR PORTA
 #define PINMOTOR PINA
 #define DDRMOTOR DDRA
@@ -25,10 +28,9 @@
 #define P_LIMIT         PA3
 
 enum {
-    SET_CW = 0,
-    SET_CCW
+    CW = 0,
+    CCW = 1,
 };
-static char cur_rotation;
 
 enum {
     MOTOR_STOPPED = 0,
@@ -83,6 +85,13 @@ char blind_cmd;
 /* I/O -- read the limit switch, control the motors */
 static void set_motion(int on)
 {
+    if (MOTOR_DEBUG) {
+        static int last_on;
+        if (on != last_on)
+            p_hex(on);
+        last_on = on;
+    }
+
     /* set motor run state bit */
     if (on)
         PORTMOTOR |= bit(P_MOTOR_ON);
@@ -96,10 +105,17 @@ static char get_motion(void)
     return !!(PINMOTOR & bit(P_MOTOR_ON));
 }
 
-static void set_direction(int cw)
+static void set_direction(int dir)
 {
+    if (MOTOR_DEBUG) {
+        static int last_dir;
+        if (dir != last_dir)
+            p_hex(dir);
+        last_dir = dir;
+    }
+
     /* set rotation bit */
-    if (cw)
+    if (dir)
         PORTMOTOR |= bit(P_MOTOR_DIR);
     else
         PORTMOTOR &= ~bit(P_MOTOR_DIR);
@@ -163,8 +179,7 @@ void blind_init(void)
 
     set_motion(0);
 
-    cur_rotation = SET_CW;
-    set_direction(SET_CW);
+    set_direction(CW);
 
     goal = inch_to_pulse(10);
 }
@@ -211,20 +226,6 @@ static void stop_moving(void)
     motor_next = MOTOR_STOPPED;
 }
 
-#if 0
-static void start_moving(void)
-{
-    putstr("start_moving\n");
-    if (cur_rotation == SET_CW) {
-        putstr(" up");
-        motor_next = MOTOR_CW;
-    } else {
-        putstr(" down");
-        motor_next = MOTOR_CCW;
-    }
-}
-#endif
-
 static void start_moving_up(void)
 {
     putstr("start moving up\n");
@@ -239,15 +240,18 @@ static void start_moving_down(void)
 
 static void blind_state(void)
 {
-    static char last_blind_is, last_blind_do;
     static char recent_motion;
-    if (blind_is != last_blind_is) {
-        p_hex(blind_is);
-        last_blind_is = blind_is;
-    }
-    if (blind_do != last_blind_do) {
-        p_hex(blind_do);
-        last_blind_do = blind_do;
+
+    if (STATE_DEBUG) {
+        static char last_blind_is, last_blind_do;
+        if (blind_is != last_blind_is) {
+            p_hex(blind_is);
+            last_blind_is = blind_is;
+        }
+        if (blind_do != last_blind_do) {
+            p_hex(blind_do);
+            last_blind_do = blind_do;
+        }
     }
 
     // make sure this is always honored, and immediately
@@ -259,8 +263,9 @@ static void blind_state(void)
         return;
     }
 
-    if (motor_state_timer) // no changes while the motor is settling
+    if (motor_next != motor_cur) { // no changes while the motor is settling
         return;
+    }
 
     switch (blind_is) {
     case BLIND_IS_STOPPED:
@@ -377,10 +382,8 @@ static void blind_state(void)
 
 static void motor_state(void)
 {
-    // ensure we make all direction changes while motor is stopped.
-    // ensure we don't restart too soon after stopping.
 
-    if (1)
+    if (STATE_DEBUG)
     {
         static char last_motor_cur, last_motor_next;
         if (motor_cur != last_motor_cur) {
@@ -393,13 +396,6 @@ static void motor_state(void)
         }
     }
 
-    // save current position 30 seconds after it stops changing
-    if (position_change_timer &&
-            check_timer(position_change_timer, (long)30*1000*1000)) {
-        blind_save_config();
-        position_change_timer = 0;
-    }
-
     if (motor_next == MOTOR_REVERSE) {
         switch (motor_cur) {
         case MOTOR_CCW:     motor_next = MOTOR_CW;  break;
@@ -408,43 +404,42 @@ static void motor_state(void)
         }
     }
 
-
-    if (motor_state_timer && !check_timer (motor_state_timer, 200)) {
-            return;
-    }
-    motor_state_timer = 0;
-
-    if (motor_next == motor_cur)
+    if (motor_next == motor_cur) {
         return;
+    }
 
-    switch (motor_cur) {
-    case MOTOR_CCW:
-    case MOTOR_CW:
-        motor_cur = MOTOR_STOPPED;
-        set_motion(0);
+    // wait for prior transitions to complete
+    if (check_timer(motor_state_timer, 200)) {
+
+        switch (motor_cur) {
+        case MOTOR_CCW:
+        case MOTOR_CW:
+            // if we're currently moving, then no matter what,
+            // we stop first.
+            motor_cur = MOTOR_STOPPED;
+            set_motion(0);
+            break;
+
+        case MOTOR_STOPPED:
+            // we're stopped, and want to start.  set direction first
+            if (motor_next == MOTOR_CW && get_direction() != CW) {
+                set_direction(CW);
+                break;
+            }
+            if (motor_next == MOTOR_CCW && get_direction() != CCW) {
+                set_direction(CCW);
+                break;
+            }
+
+            // we're stopped, and the direction is set.  let's go!
+            if (motor_next != MOTOR_STOPPED) {
+                motor_cur = motor_next;
+                set_motion(1);
+            }
+        }
+
+        // schedule the next transition
         motor_state_timer = get_ms_timer();
-        break;
-
-    case MOTOR_STOPPED:
-        if (motor_next == MOTOR_CW && cur_rotation != SET_CW) {
-            cur_rotation = SET_CW;
-            set_direction(SET_CW);
-            motor_state_timer = get_ms_timer();
-            break;
-        }
-
-        if (motor_next == MOTOR_CCW && cur_rotation != SET_CCW) {
-            cur_rotation = SET_CCW;
-            set_direction(SET_CCW);
-            motor_state_timer = get_ms_timer();
-            break;
-        }
-
-        if (motor_next != MOTOR_STOPPED) {
-            motor_cur = motor_next;
-            set_motion(1);
-        }
-
     }
 }
 
@@ -490,6 +485,13 @@ void blind_process(void)
 {
 
     char cmd;
+
+    // save current position 30 seconds after it stops changing
+    if (position_change_timer &&
+            check_timer(position_change_timer, (long)30*1000*1000)) {
+        blind_save_config();
+        position_change_timer = 0;
+    }
 
     blind_ir();
 

@@ -489,8 +489,7 @@ void blind_process(void)
     char cmd;
 
     // save current position 30 seconds after it stops changing
-    if (position_change_timer &&
-            check_timer(position_change_timer, (long)30*1000*1000)) {
+    if (check_timer(position_change_timer, (long)30*1000*1000)) {
         blind_save_config();
         position_change_timer = 0;
     }

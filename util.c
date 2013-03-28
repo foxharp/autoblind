@@ -102,13 +102,13 @@ void init_led(void)
 void led_handle(void)
 {
     /* turn off LED flash */
-    if (led_time && check_timer(led_time, 100)) {
+    if (check_timer(led_time, 100)) {
         Led1_Flip();
         led_time = 0;
     }
 
     /* silence tone */
-    if (tone_time && check_timer(tone_time, tone_duration)) {
+    if (check_timer(tone_time, tone_duration)) {
         tone_on = 0;
         tone_time = 0;
         Tone_Off();  // keep the pin low when off

@@ -94,7 +94,7 @@ long get_ms_timer(void)
 
 unsigned char check_timer(long base, long duration)
 {
-    return get_ms_timer() > (base + duration);
+    return base && (get_ms_timer() > (base + duration));
 }
 
 void short_delay(unsigned int n)

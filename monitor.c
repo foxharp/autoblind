@@ -131,30 +131,30 @@ void monitor(void)
         break;
 
     case 'u': // up
-        blind_cmd = BL_GO_UP;
+        do_blind_cmd(BL_GO_UP);
         break;
     case 'd': // down
-        blind_cmd = BL_GO_DOWN;
+        do_blind_cmd(BL_GO_DOWN);
         break;
     case 's': // stop
-        blind_cmd = BL_STOP;
+        do_blind_cmd(BL_STOP);
         break;
     case 'o': // one button control
-        blind_cmd = BL_ONE_BUTTON;
+        do_blind_cmd(BL_ONE_BUTTON);
         break;
     case 'f': // force up
-        blind_cmd = BL_FORCE_UP;
+        do_blind_cmd(BL_FORCE_UP);
         break;
     case 'F': // force down
-        blind_cmd = BL_FORCE_DOWN;
+        do_blind_cmd(BL_FORCE_DOWN);
         break;
     case 'm':
         blind_set_position(n);
-        blind_cmd = BL_SET_TOP;
+        do_blind_cmd(BL_SET_TOP);
         break;
     case 'M':
         blind_set_position(n);
-        blind_cmd = BL_SET_BOTTOM;
+        do_blind_cmd(BL_SET_BOTTOM);
         break;
 
     case 'B':

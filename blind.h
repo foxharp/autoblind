@@ -23,5 +23,6 @@ enum {
 };
 
 extern char blind_cmd;
+#define do_blind_cmd(x)  do { blind_cmd = x; } while(0)
 
 // vile:noti:sw=4

@@ -97,7 +97,7 @@ void button_process(void)
 
 	// short press
 	putstr("short button\n");
-        blind_cmd = BL_ONE_BUTTON;
+        do_blind_cmd(BL_ONE_BUTTON);
 	break;
 
     }

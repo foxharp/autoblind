@@ -95,8 +95,8 @@ char tone_on;
 
 void init_led(void)
 {
-    DDRLED |= bit(BITLED);
-    DDRTONE |= bit(BITTONE);
+    DDRLED |= bit(BITLED);  // LED
+    DDRTONE |= TONEBITS;    // tone
 }
 
 void led_handle(void)
@@ -128,6 +128,7 @@ void tone_start(int duration)
     tone_on = 1;
     tone_time = get_ms_timer();
     tone_duration = duration;
+    Tone_On();
     return;
 }
 

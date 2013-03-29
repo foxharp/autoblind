@@ -46,16 +46,18 @@ void do_debug_out(void);
 #define Led1_is_On()       ( PINLED   &  bit(BITLED) )
 
 /* tone control */
-# define DDRTONE DDRB
-# define PORTTONE PORTB
-# define PINTONE PINB
-# define BITTONE PB0
+/* drive the speaker push/pull from two pins */
+# define DDRTONE DDRA
+# define PORTTONE PORTA
+# define PINTONE PINA
+# define ONE_TONEBIT bit(PA5)
+# define TONEBITS (bit(PA5)|bit(PA6))
 
-#define Tone_On()       do { PORTTONE |=  bit(BITTONE); } while(0)
-#define Tone_Off()      do { PORTTONE &= ~bit(BITTONE); } while(0)
-#define Tone_Flip()     do { PINTONE   =  bit(BITTONE); } while(0)
-#define Tone_is_On()       ( PINTONE  &   bit(BITTONE) )
+#define Tone_On()       do { PORTTONE |=  ONE_TONEBIT; } while(0)
+#define Tone_Off()      do { PORTTONE &= ~TONEBITS; } while(0)
+#define Tone_Flip()     do { PINTONE   =  TONEBITS; } while(0)
 #define tone_cycle()    do { if (tone_on) Tone_Flip(); } while(0)
+
 extern char tone_on;
 void tone_start(int duration);
 #define TONE_CHIRP 100

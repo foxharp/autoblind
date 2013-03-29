@@ -19,11 +19,6 @@ void putstr(const char *s);
 #else
 #define putstr(s) putstr_p(s)
 #endif
-void init_led(void);
-void led_handle(void);
-void led_flash(void);
-
-void blinky(void);
 
 /* ground this i/o pin to enable early debug mode */
 #define PORTDEBUG PORTB
@@ -44,6 +39,10 @@ void do_debug_out(void);
 #define Led1_Off()      do { PORTLED &= ~bit(BITLED); } while(0)
 #define Led1_Flip()     do { PINLED   =  bit(BITLED); } while(0)
 #define Led1_is_On()       ( PINLED   &  bit(BITLED) )
+void init_led(void);
+void led_handle(void);
+void led_flash(void);
+void blinky(void);
 
 /* tone control */
 /* drive the speaker push/pull from two pins */
@@ -53,11 +52,13 @@ void do_debug_out(void);
 # define ONE_TONEBIT bit(PA5)
 # define TONEBITS (bit(PA5)|bit(PA6))
 
-#define Tone_On()       do { PORTTONE |=  ONE_TONEBIT; } while(0)
-#define Tone_Off()      do { PORTTONE &= ~TONEBITS; } while(0)
-#define Tone_Flip()     do { PINTONE   =  TONEBITS; } while(0)
-#define tone_cycle()    do { if (tone_on) Tone_Flip(); } while(0)
+#define tone_flip()     do { PINTONE =  TONEBITS; } while(0)  // toggle both
+#define tone_cycle()    do { if (tone_on) tone_flip(); } while(0)
 
+void tone_hw_disable(void);
+void tone_hw_enable(void);
+void init_tone(void);
+void tone_handle(void);
 extern char tone_on;
 void tone_start(int duration);
 #define TONE_CHIRP 100

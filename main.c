@@ -75,6 +75,7 @@ int main()
         monitor();
 #endif
         led_handle();
+        tone_handle();
         ir_process();
         button_process();
 

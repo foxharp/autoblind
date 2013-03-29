@@ -89,6 +89,7 @@ void putstr_p(const prog_char * s)
  */
 
 static long led_time;
+
 static long tone_time;
 static int tone_duration;
 char tone_on;
@@ -96,7 +97,6 @@ char tone_on;
 void init_led(void)
 {
     DDRLED |= bit(BITLED);  // LED
-    DDRTONE |= TONEBITS;    // tone
 }
 
 void led_handle(void)
@@ -106,14 +106,6 @@ void led_handle(void)
         Led1_Flip();
         led_time = 0;
     }
-
-    /* silence tone */
-    if (check_timer(tone_time, tone_duration)) {
-        tone_on = 0;
-        tone_time = 0;
-        Tone_Off();  // keep the pin low when off
-    }
-
 }
 
 void led_flash(void)
@@ -123,13 +115,36 @@ void led_flash(void)
     return;
 }
 
+void tone_hw_enable(void)
+{
+    DDRTONE |= TONEBITS;
+    // the two bits are kept different, and are both flipped when we cycle
+    PORTTONE |= ONE_TONEBIT;
+}
+void tone_hw_disable(void)
+{
+    PORTTONE &= ~TONEBITS;
+    DDRTONE &= ~TONEBITS;
+}
+
 void tone_start(int duration)
 {
     tone_on = 1;
     tone_time = get_ms_timer();
     tone_duration = duration;
-    Tone_On();
+    tone_hw_enable();
     return;
+}
+
+void tone_handle(void)
+{
+    /* silence tone */
+    if (check_timer(tone_time, tone_duration)) {
+        tone_on = 0;
+        tone_time = 0;
+        tone_hw_disable();  // set both pins to input when off
+    }
+
 }
 
 /*

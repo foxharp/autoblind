@@ -41,6 +41,7 @@ enum {
 static char motor_cur, motor_next;
 static long motor_state_timer;
 static long position_change_timer;
+static char position_changed;
 
 enum {
     BLIND_STOP = 0,
@@ -220,6 +221,7 @@ ISR(INT1_vect)          // rotation pulse
         blc->position--;
 
     position_change_timer = get_ms_timer();
+    position_changed = 1;
 }
 
 static void stop_moving(void)
@@ -458,7 +460,7 @@ static void blind_ir(void)
 
     switch (cmd) {
     case 0: // up
-            if (alt_timer && !check_timer(alt_timer, 500)) {
+            if (alt && !check_timer(alt_timer, 500)) {
                 if (alt == 1)
                     blind_cmd = BL_FORCE_UP;
                 else
@@ -470,7 +472,7 @@ static void blind_ir(void)
             break;
 
     case 1: // down
-            if (alt_timer && !check_timer(alt_timer, 500)) {
+            if (alt && !check_timer(alt_timer, 500)) {
                 if (alt == 1)
                     blind_cmd = BL_FORCE_DOWN;
                 else
@@ -486,7 +488,7 @@ static void blind_ir(void)
             break;
 
     case 5: // alt  (power)
-            if (alt_timer && !check_timer(alt_timer, 500)) {
+            if (alt && !check_timer(alt_timer, 500)) {
                 alt++;
                 tone_start(TONE_CHIRP);
             } else {
@@ -518,9 +520,10 @@ void blind_process(void)
     char cmd;
 
     // save current position 30 seconds after it stops changing
-    if (check_timer(position_change_timer, (long)30*1000*1000)) {
+    if (position_changed &&
+            check_timer(position_change_timer, (long)30*1000*1000)) {
         blind_save_config();
-        position_change_timer = 0;
+        position_changed = 0;
     }
 
     blind_ir();

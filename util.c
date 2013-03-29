@@ -102,10 +102,8 @@ void init_led(void)
 void led_handle(void)
 {
     /* turn off LED flash */
-    if (check_timer(led_time, 100)) {
-        led1_flip();
-        led_time = 0;
-    }
+    if (led1_is_on() && check_timer(led_time, 100))
+        led1_off();
 }
 
 void led_flash(void)

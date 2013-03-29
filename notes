@@ -67,6 +67,13 @@ switch:   18" + 26" + 18"	    62"
 	across  up   further up
 sensor:	    18" + 26" + 36"	    80"
 
+---------- extended commands for one-button ---
+
+long, up      force up
+long, down    force down
+long, long, up    set upper limit
+long, long, down  set lower limit
+
 -------X10 bottle-opener remote
 
 begin remote

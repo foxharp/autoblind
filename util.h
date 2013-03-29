@@ -35,10 +35,10 @@ void do_debug_out(void);
 # define PINLED PINB
 # define BITLED PB0
 
-#define Led1_On()       do { PORTLED |=  bit(BITLED); } while(0)
-#define Led1_Off()      do { PORTLED &= ~bit(BITLED); } while(0)
-#define Led1_Flip()     do { PINLED   =  bit(BITLED); } while(0)
-#define Led1_is_On()       ( PINLED   &  bit(BITLED) )
+#define led1_on()       do { PORTLED |=  bit(BITLED); } while(0)
+#define led1_off()      do { PORTLED &= ~bit(BITLED); } while(0)
+#define led1_flip()     do { PINLED   =  bit(BITLED); } while(0)
+#define led1_is_on()       ( PINLED   &  bit(BITLED) )
 void init_led(void);
 void led_handle(void);
 void led_flash(void);

@@ -103,14 +103,14 @@ void led_handle(void)
 {
     /* turn off LED flash */
     if (check_timer(led_time, 100)) {
-        Led1_Flip();
+        led1_flip();
         led_time = 0;
     }
 }
 
 void led_flash(void)
 {
-    Led1_On();
+    led1_on();
     led_time = get_ms_timer();
     return;
 }
@@ -164,17 +164,14 @@ delay(word dly)
 /*
  * wiggling light pattern, to show life at startup.
  * useful for visually detecting watchdog or crash.
+ * uses a delay loop -- so don't call it later.
  */
 void
 blinky(void)
 {
     byte i;
     for (i = 0; i < 12; i++) {
-        if (i & 1) {
-            Led1_Off();
-        } else {
-            Led1_On();
-        }
+        led1_flip();
         delay(50);
     }
 }

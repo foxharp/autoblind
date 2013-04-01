@@ -33,24 +33,27 @@ pin choices:
 
     TONE	PA5 and PA6
 
-6-pin connector to motor
+(LED end of board, from top)
 
-    +5 
-    MOTOR_ON
-    MOTOR_DIR
-    nc
-    GND
-    MOTOR_ROT
+    6-pin connector to motor  (unordered)
+	+5 
+	MOTOR_DIR	PA1
+	MOTOR_ON	PA0
+	MOTOR_TURN	PA2
+	nc
+	GND
 
-2-pin connector to limit switch
-    GND
-    LIMIT
+    2-pin connector to limit switch  (unordered)
+	LIMIT		PA3
+	GND
 
-4-pin connector to IR sensor
-    +5
-    IR
-    nc
-    GND
+    4-pin connector to IR sensor  (unordered)
+	GND
+	BUTTON		PB2	(parallel with on-board button)
+	IR		PA4
+	+5
+
+(USB end of board)
 
 
 -------------switches---------

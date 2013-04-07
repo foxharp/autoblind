@@ -412,20 +412,23 @@ static void motor_state(void)
         return;
     }
 
-    // wait for prior transitions to complete
-    if (check_timer(motor_state_timer, 200)) {
+    switch (motor_cur) {
+    case MOTOR_DOWN:
+    case MOTOR_UP:
+        // if we're currently moving, then no matter what,
+        // we stop first.
+        motor_cur = MOTOR_STOPPED;
+        set_motion(0);
+        set_direction(0);
 
-        switch (motor_cur) {
-        case MOTOR_DOWN:
-        case MOTOR_UP:
-            // if we're currently moving, then no matter what,
-            // we stop first.
-            motor_cur = MOTOR_STOPPED;
-            set_motion(0);
-            set_direction(0);
-            break;
+        // schedule the next transition
+        motor_state_timer = get_ms_timer();
+        break;
 
-        case MOTOR_STOPPED:
+    case MOTOR_STOPPED:
+        // wait for prior transitions to complete
+        if (check_timer(motor_state_timer, 200)) {
+
             // we're stopped, and want to start.  set direction first
             if (motor_next == MOTOR_UP && get_direction() != blc->up_dir) {
                 set_direction(blc->up_dir);
@@ -435,16 +438,15 @@ static void motor_state(void)
                 set_direction(!blc->up_dir);
                 break;
             }
-
             // we're stopped, and the direction is set.  let's go!
             if (motor_next != MOTOR_STOPPED) {
                 motor_cur = motor_next;
                 set_motion(1);
             }
+            // schedule the next transition
+            motor_state_timer = get_ms_timer();
         }
-
-        // schedule the next transition
-        motor_state_timer = get_ms_timer();
+        break;
     }
 }
 

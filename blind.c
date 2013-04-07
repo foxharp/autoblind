@@ -422,6 +422,7 @@ static void motor_state(void)
             // we stop first.
             motor_cur = MOTOR_STOPPED;
             set_motion(0);
+            set_direction(0);
             break;
 
         case MOTOR_STOPPED:

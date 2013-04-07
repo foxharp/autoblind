@@ -28,14 +28,9 @@
 #define P_LIMIT         PA3
 
 enum {
-    CW = 0,
-    CCW = 1,
-};
-
-enum {
     MOTOR_STOPPED = 0,
-    MOTOR_CW,
-    MOTOR_CCW,
+    MOTOR_UP,
+    MOTOR_DOWN,
     MOTOR_REVERSE,
 };
 static char motor_cur, motor_next;
@@ -70,7 +65,8 @@ struct blind_config {
     int top_stop;
     int bottom_stop;
     int position;
-    int padding[5];
+    int up_dir;
+    int padding[4];
 } blc[1];
 
 #define NOMINAL_PEAK 200
@@ -147,17 +143,19 @@ void blind_read_config(void)
         ip = (int *)blc;
         crnl();
         for (i = 0; i < sizeof(*blc)/sizeof(int); i++) {
-	    p_hex(i); p_hex(ip[i]); crnl();
+            p_hex(i); p_hex(ip[i]); crnl();
         }
     }
 
     // set sensible defaults
     if (blc->top_stop == 0xffff)
-	blc->top_stop = NOMINAL_PEAK;
+        blc->top_stop = NOMINAL_PEAK;
     if (blc->bottom_stop == 0xffff)
-	blc->bottom_stop = -10000;
+        blc->bottom_stop = -10000;
     if (blc->position == 0xffff)
-	blc->position = 10;
+        blc->position = 10;
+    if (blc->up_dir == 0xffff)
+        blc->up_dir = 0;
 
     // write back any updated values
     blind_save_config();
@@ -182,7 +180,7 @@ void blind_init(void)
 
     set_motion(0);
 
-    set_direction(CW);
+    set_direction(0);
 
     goal = inch_to_pulse(10);
 }
@@ -233,13 +231,13 @@ static void stop_moving(void)
 static void start_moving_up(void)
 {
     putstr("start moving up\n");
-    motor_next = MOTOR_CW;
+    motor_next = MOTOR_UP;
 }
 
 static void start_moving_down(void)
 {
     putstr("start moving down\n");
-    motor_next = MOTOR_CCW;
+    motor_next = MOTOR_DOWN;
 }
 
 static void blind_state(void)
@@ -343,6 +341,8 @@ static void blind_state(void)
             stop_moving();
             zero_position();
             blind_is = BLIND_IS_AT_LIMIT;
+            // we hit the limit going the wrong direction 
+            blc->up_dir = !blc->up_dir;
         } else if (blind_do == BLIND_DOWN) {
             start_moving_down();
             blind_is = BLIND_IS_FALLING;
@@ -402,8 +402,8 @@ static void motor_state(void)
 
     if (motor_next == MOTOR_REVERSE) {
         switch (motor_cur) {
-        case MOTOR_CCW:     motor_next = MOTOR_CW;  break;
-        case MOTOR_CW:      motor_next = MOTOR_CCW;  break;
+        case MOTOR_DOWN:    motor_next = MOTOR_UP;  break;
+        case MOTOR_UP:      motor_next = MOTOR_DOWN;  break;
         case MOTOR_STOPPED: motor_next = MOTOR_STOPPED; break;
         }
     }
@@ -416,8 +416,8 @@ static void motor_state(void)
     if (check_timer(motor_state_timer, 200)) {
 
         switch (motor_cur) {
-        case MOTOR_CCW:
-        case MOTOR_CW:
+        case MOTOR_DOWN:
+        case MOTOR_UP:
             // if we're currently moving, then no matter what,
             // we stop first.
             motor_cur = MOTOR_STOPPED;
@@ -426,12 +426,12 @@ static void motor_state(void)
 
         case MOTOR_STOPPED:
             // we're stopped, and want to start.  set direction first
-            if (motor_next == MOTOR_CW && get_direction() != CW) {
-                set_direction(CW);
+            if (motor_next == MOTOR_UP && get_direction() != blc->up_dir) {
+                set_direction(blc->up_dir);
                 break;
             }
-            if (motor_next == MOTOR_CCW && get_direction() != CCW) {
-                set_direction(CCW);
+            if (motor_next == MOTOR_DOWN && get_direction() != !blc->up_dir) {
+                set_direction(!blc->up_dir);
                 break;
             }
 

@@ -36,12 +36,12 @@ pin choices:
 (LED end of board, from top)
 
     6-pin connector to motor  (unordered)
-	+5 
+	GND
 	MOTOR_DIR	PA1
 	MOTOR_ON	PA0
-	MOTOR_TURN	PA2
 	nc
-	GND
+	MOTOR_TURN	PA2
+	+5 
 
     2-pin connector to limit switch  (unordered)
 	LIMIT		PA3

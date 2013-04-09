@@ -29,6 +29,7 @@
 
 enum {
     MOTOR_STOPPED = 0,
+    MOTOR_STOPPING,
     MOTOR_UP,
     MOTOR_DOWN,
     MOTOR_REVERSE,
@@ -232,7 +233,7 @@ ISR(INT1_vect)          // rotation pulse
 static void stop_moving(void)
 {
     putstr("stop_moving\n");
-    motor_next = MOTOR_STOPPED;
+    motor_next = MOTOR_STOPPING;
 }
 
 static void start_moving_up(void)
@@ -426,12 +427,24 @@ static void motor_state(void)
     case MOTOR_UP:
         // if we're currently moving, then no matter what,
         // we stop first.
-        motor_cur = MOTOR_STOPPED;
         set_motion(0);
-        set_direction(0);
+
+        motor_cur = MOTOR_STOPPING;
 
         // schedule the next transition
         motor_state_timer = get_ms_timer();
+        break;
+
+    case MOTOR_STOPPING:
+        // wait for prior transitions to complete
+        if (check_timer(motor_state_timer, 200)) {
+            // then we idle the direction relay
+            set_direction(0);
+
+            motor_cur = MOTOR_STOPPED;
+            // schedule the next transition
+            motor_state_timer = get_ms_timer();
+        }
         break;
 
     case MOTOR_STOPPED:

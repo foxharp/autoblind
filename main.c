@@ -50,6 +50,7 @@ int main()
     get_mcusr();
     init_debug();
     init_led();
+    blind_init();
     blinky();
 
     hardware_setup();
@@ -59,7 +60,6 @@ int main()
     init_timer();
     suart_init();
     ir_init();
-    blind_init();
 
     sei();
 

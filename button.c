@@ -26,7 +26,7 @@
 #define BUTTON_PORT         PORTB
 #define BUTTON_PIN          PINB
 #define BUTTON_BIT          PB2 // input:  from IR receiver
-#define read_button()	    !(BUTTON_PIN & bit(BUTTON_BIT))
+#define read_button()       !(BUTTON_PIN & bit(BUTTON_BIT))
 
 /* states */
 enum {
@@ -50,9 +50,9 @@ void button_process(void)
     button = read_button();
 
     if (BUTTON_DEBUG) {
-	static char last_button_is;
+        static char last_button_is;
         if (last_button_is != button_is) {
-	    p_hex(button_is);
+            p_hex(button_is);
             last_button_is = button_is;
         }
     }
@@ -82,23 +82,23 @@ void button_process(void)
 
     case BUTTON_IS_DOWN:
         if (button)  // still down
-	    break;
+            break;
 
-	// released -- all actions happen on release
-	button_is = BUTTON_IS_UP;
+        // released -- all actions happen on release
+        button_is = BUTTON_IS_UP;
 
-	// check for a long press first
+        // check for a long press first
         if (check_timer(button_timer, 2000)) {
             putstr("long button\n");
-	    // do nothing yet
-	    break;
+            // do nothing yet
+            break;
         }
 
 
-	// short press
-	putstr("short button\n");
+        // short press
+        putstr("short button\n");
         do_blind_cmd(BL_ONE_BUTTON);
-	break;
+        break;
 
     }
 }

@@ -92,7 +92,7 @@ static long led_time;
 
 static long tone_time;
 static int tone_duration;
-char tone_on;
+char tone_on, tonecnt;
 
 void init_led(void)
 {
@@ -125,9 +125,9 @@ void tone_hw_disable(void)
     DDRTONE &= ~TONEBITS;
 }
 
-void tone_start(int duration)
+void tone_start(char hilo, int duration)
 {
-    tone_on = 1;
+    tone_on = hilo;
     tone_time = get_ms_timer();
     tone_duration = duration;
     tone_hw_enable();

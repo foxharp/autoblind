@@ -53,16 +53,17 @@ void blinky(void);
 # define TONEBITS (bit(PA5)|bit(PA6))
 
 #define tone_flip()     do { PINTONE =  TONEBITS; } while(0)  // toggle both
-#define tone_cycle()    do { if (tone_on) tone_flip(); } while(0)
+#define tone_cycle()    do { \
+        if (tone_on && (tonecnt++ & tone_on) == 0) tone_flip(); } while(0)
 
 void tone_hw_disable(void);
 void tone_hw_enable(void);
 void init_tone(void);
 void tone_handle(void);
-extern char tone_on;
-void tone_start(int duration);
-#define TONE_CHIRP 100
-#define TONE_CONFIRM 300
+extern char tone_on, tonecnt;
+void tone_start(char hilo, int duration);
+#define TONE_CHIRP 1,100
+#define TONE_CONFIRM 3,300
 
 void util_init(void);
 

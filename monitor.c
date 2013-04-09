@@ -207,7 +207,13 @@ void monitor(void)
         break;
 
     case 't':
-        tone_start(n);
+        if (n == 1)
+            tone_start(TONE_CHIRP);
+        else if (n == 2)
+            tone_start(TONE_CONFIRM);
+        else {
+            tone_start(gethex(), n);
+        }
         break;
 
     case 'T':

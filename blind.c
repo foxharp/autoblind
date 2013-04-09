@@ -372,7 +372,7 @@ static void blind_state(void)
         } else if (blind_do == BLIND_FORCE_UP) {
             start_moving_up();
             blind_is = BLIND_IS_RISING;
-            goal = blc->top_stop + inch_to_pulse(6);
+            goal = get_position() + inch_to_pulse(6);
         }
         break;
 
@@ -385,7 +385,7 @@ static void blind_state(void)
         } else if (blind_do == BLIND_FORCE_DOWN) {
             start_moving_down();
             blind_is = BLIND_IS_FALLING;
-            goal = blc->bottom_stop - inch_to_pulse(3);
+            goal = get_position() - inch_to_pulse(3);
         }
         break;
     }

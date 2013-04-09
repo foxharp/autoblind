@@ -12,6 +12,7 @@
 
 #include "timer.h"
 #include "util.h"
+#include "blind.h"
 #include "common.h"
 
 #ifndef NO_MSTIMER
@@ -74,6 +75,7 @@ ISR(TIMER1_COMPD_vect)
     // approximately 1/second (much cheaper, codewise, than "% 1000")
     if ((milliseconds & 1023) == 0) {
         led_flash();
+        blind_report();
     }
 }
 

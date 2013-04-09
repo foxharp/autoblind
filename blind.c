@@ -45,6 +45,7 @@ enum {
     BLIND_FORCE_UP,
     BLIND_FORCE_DOWN,
     BLIND_TOGGLE,
+    BLIND_NOP,
 };
 static char blind_do;
 
@@ -78,6 +79,7 @@ struct blind_config {
 #define inch_to_pulse(in)  (100 * (in) / 63)
 
 char blind_cmd;
+char do_blind_report;
 
 /* I/O -- read the limit switch, control the motors */
 static void set_motion(int on)
@@ -126,10 +128,10 @@ char get_direction(void)
     return !!(PINMOTOR & bit(P_MOTOR_DIR));
 }
 
-char at_limit(void)
+char blind_at_limit(void)
 {
     /* detect the limit switch */
-    return !!(PINMOTOR & bit(P_LIMIT));
+    return !(PINMOTOR & bit(P_LIMIT));
 }
 
 void blind_read_config(void)
@@ -174,6 +176,8 @@ void blind_init(void)
     PORTMOTOR &= ~(bit(P_MOTOR_ON) | bit(P_MOTOR_DIR));
     DDRMOTOR |= bit(P_MOTOR_ON) | bit(P_MOTOR_DIR);
 
+    PORTMOTOR |= bit(P_LIMIT); // enable pullup
+
     // clear and enable motor rotation interrupt
     GIFR = bit(INTF1);
     GIMSK |= bit(INT1);
@@ -213,10 +217,13 @@ static void zero_position(void)
 
 ISR(INT1_vect)          // rotation pulse
 {
-    if (get_direction())
+    if (get_direction() == blc->up_dir)
         blc->position++;
     else
         blc->position--;
+
+    if (ignore_limit)
+        ignore_limit--;
 
     position_change_timer = get_ms_timer();
     position_changed = 1;
@@ -243,6 +250,7 @@ static void start_moving_down(void)
 static void blind_state(void)
 {
     static char recent_motion;
+    char next_do = BLIND_NOP;
 
     if (STATE_DEBUG) {
         static char last_blind_is, last_blind_do;
@@ -262,6 +270,7 @@ static void blind_state(void)
             stop_moving();
             blind_is = BLIND_IS_STOPPED;
         }
+        blind_do = BLIND_NOP;
         return;
     }
 
@@ -276,7 +285,7 @@ static void blind_state(void)
             set_motion(0);
         }
 #if 0
-        if (at_limit()) {
+        if (blind_at_limit()) {
             stop_moving();
             zero_position();
             blind_is = BLIND_IS_AT_LIMIT;
@@ -298,16 +307,16 @@ static void blind_state(void)
             goal = blc->bottom_stop;
         } else if (blind_do == BLIND_TOGGLE) {
             if (recent_motion == BLIND_IS_RISING) {
-                blind_do = BLIND_DOWN;
+                next_do = BLIND_DOWN;
             } else {
-                blind_do = BLIND_UP;
+                next_do = BLIND_UP;
             }
         }
         break;
 
     case BLIND_IS_FALLING:
         recent_motion = blind_is;
-        if (at_limit()) {
+        if (blind_at_limit()) {
             stop_moving();
             zero_position();
             blind_is = BLIND_IS_AT_LIMIT;
@@ -319,7 +328,7 @@ static void blind_state(void)
             stop_moving();
             blind_is = BLIND_IS_AT_BOTTOM_STOP;
         } else if (blind_do == BLIND_TOGGLE) {
-            blind_do = BLIND_STOP;
+            next_do = BLIND_STOP;
         }
         break;
 
@@ -335,9 +344,8 @@ static void blind_state(void)
 
     case BLIND_IS_RISING:
         recent_motion = blind_is;
-        if (ignore_limit)
-            ignore_limit--;
-        if (at_limit() && !ignore_limit) {
+        if (blind_at_limit() && !ignore_limit) {
+            putstr("hit LIMIT\n");
             stop_moving();
             zero_position();
             blind_is = BLIND_IS_AT_LIMIT;
@@ -351,7 +359,7 @@ static void blind_state(void)
             stop_moving();
             blind_is = BLIND_IS_AT_TOP_STOP;
         } else if (blind_do == BLIND_TOGGLE) {
-            blind_do = BLIND_STOP;
+            next_do = BLIND_STOP;
         }
         break;
 
@@ -382,6 +390,7 @@ static void blind_state(void)
         break;
     }
 
+    blind_do = next_do;
 }
 
 static void motor_state(void)
@@ -527,6 +536,18 @@ void blind_process(void)
             check_timer(position_change_timer, (long)30*1000*1000)) {
         blind_save_config();
         position_changed = 0;
+    }
+
+    if (do_blind_report) {
+        static int last_pos;
+        int cur_pos;
+
+        cur_pos = get_position();
+        if (cur_pos != last_pos) {
+            p_hex(get_position());
+            last_pos = cur_pos;
+        }
+        do_blind_report = 0;
     }
 
     blind_ir();

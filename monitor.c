@@ -197,6 +197,11 @@ void monitor(void)
         break;
 
     case 'l':
+        p_hex(blind_at_limit());
+        crnl();
+        break;
+
+    case 'L':
         wdt_disable();
         while (1) {
             cmd = getch();

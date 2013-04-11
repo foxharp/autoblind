@@ -74,7 +74,7 @@ void button_process(void)
             break;
         }
 
-        if (check_timer(button_timer, 100)) {
+        if (check_timer(button_timer, 50)) {
             button_is = BUTTON_IS_DOWN;
             // putstr("button assert\n");
         }
@@ -88,7 +88,7 @@ void button_process(void)
         button_is = BUTTON_IS_UP;
 
         // check for a long press first
-        if (check_timer(button_timer, 2000)) {
+        if (check_timer(button_timer, 1000)) {
             putstr("long button\n");
             // do nothing yet
             break;

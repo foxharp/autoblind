@@ -224,10 +224,10 @@ ir_process(void)
             ir_accum |= 1;
 
 #ifdef PULSE_DEBUG
-        ir_pulse[ir_i++] = len;
+        ir_pulse[ir_i] = len;
 #endif
 
-        if (ir_i >= MAX_PULSES) {
+        if (++ir_i >= MAX_PULSES) {
             ir_code = ir_accum;
             ir_code_avail = 1;
         }

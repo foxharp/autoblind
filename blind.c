@@ -521,6 +521,10 @@ static void blind_ir(void)
             }
             alt_timer = get_ms_timer();
             return;
+
+    case 2: // left
+            blind_cmd = BL_ONE_BUTTON;
+            break;
     }
     alt_timer = 0;
     alt = 0;

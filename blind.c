@@ -16,7 +16,7 @@
 #include "blind.h"
 #include "ir.h"
 
-#define STATE_DEBUG 1
+#define STATE_DEBUG 0
 #define MOTOR_DEBUG 0
 
 #define PORTMOTOR PORTA

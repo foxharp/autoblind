@@ -485,7 +485,7 @@ static void blind_ir(void)
 
     switch (cmd) {
     case 0: // up
-            if (alt && !check_timer(alt_timer, 500)) {
+            if (alt && !check_timer(alt_timer, 1000)) {
                 if (alt == 1)
                     blind_cmd = BL_FORCE_UP;
                 else
@@ -497,7 +497,7 @@ static void blind_ir(void)
             break;
 
     case 1: // down
-            if (alt && !check_timer(alt_timer, 500)) {
+            if (alt && !check_timer(alt_timer, 1000)) {
                 if (alt == 1)
                     blind_cmd = BL_FORCE_DOWN;
                 else
@@ -513,7 +513,7 @@ static void blind_ir(void)
             break;
 
     case 5: // alt  (power)
-            if (alt && !check_timer(alt_timer, 500)) {
+            if (alt && !check_timer(alt_timer, 1000)) {
                 alt++;
                 tone_start(TONE_CHIRP);
             } else {

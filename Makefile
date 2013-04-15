@@ -1,11 +1,11 @@
 
-# Makefile for xostick 
+# Makefile for pgf's automatic blind controller 
 # Paul Fox, March 2013
 
 VERSION = $(shell date +%y%m%d-%H%M)
 
 
-PROG = xostick
+PROG = autoblind
 SRCS = main.c ir.c monitor.c util.c timer.c suart.c blind.c button.c
 HEADERS = $(shell echo *.h)
 
@@ -88,15 +88,15 @@ tarball: all clean
 	mkdir -p oldfiles
 	mv $(PROG)-*.hex *.tar.gz oldfiles || true
 	mv $(PROG).hex $(PROG)-$(VERSION).hex || true
-	ln -s xostick ../xostick-$(VERSION)
+	ln -s $(PROG) ../$(PROG)-$(VERSION)
 	tar -C .. --dereference \
 	    --exclude CVS \
 	    --exclude oldfiles \
 	    --exclude web \
 	    --exclude '*.tar.gz' \
-	    -czf ../xostick-$(VERSION).tar.gz xostick-$(VERSION)
-	mv ../xostick-$(VERSION).tar.gz .
-	rm -f ../xostick-$(VERSION)
+	    -czf ../$(PROG)-$(VERSION).tar.gz $(PROG)-$(VERSION)
+	mv ../$(PROG)-$(VERSION).tar.gz .
+	rm -f ../$(PROG)-$(VERSION)
 
 program:
 	sudo avrdude -c usbtiny -p t861 -U $(PROG).hex
@@ -105,5 +105,5 @@ clean:
 	rm -f *.o *.flash *.flash.* *.out *.map *.lst *.lss
 	
 clobber: clean
-	rm -f xostick.hex
+	rm -f $(PROG).hex
 

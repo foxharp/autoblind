@@ -30,6 +30,7 @@
 enum {
     MOTOR_STOPPED = 0,
     MOTOR_STOPPING,
+    MOTOR_BRAKING,
     MOTOR_UP,
     MOTOR_DOWN,
     MOTOR_REVERSE,
@@ -233,7 +234,7 @@ ISR(INT1_vect)          // rotation pulse
 static void stop_moving(void)
 {
     putstr("stop_moving\n");
-    motor_next = MOTOR_STOPPING;
+    motor_next = MOTOR_STOPPED;
 }
 
 static void start_moving_up(void)
@@ -285,19 +286,6 @@ static void blind_state(void)
             putstr("failsafe STOP\n");
             set_motion(0);
         }
-#if 0
-        if (blind_at_limit()) {
-            stop_moving();
-            zero_position();
-            blind_is = BLIND_IS_AT_LIMIT;
-        } else if (get_position() >= blc->top_stop) {
-            stop_moving();
-            blind_is = BLIND_IS_AT_TOP_STOP;
-        } else if (get_position() <= blc->bottom_stop) {
-            stop_moving();
-            blind_is = BLIND_IS_AT_BOTTOM_STOP;
-        } else
-#endif
         if (blind_do == BLIND_UP) {
             start_moving_up();
             blind_is = BLIND_IS_RISING;
@@ -437,7 +425,18 @@ static void motor_state(void)
 
     case MOTOR_STOPPING:
         // wait for prior transitions to complete
-        if (check_timer(motor_state_timer, 200)) {
+        if (check_timer(motor_state_timer, 50)) {
+            // then we reverse the direction relay to force a stop
+            set_direction(!get_direction());
+
+            motor_cur = MOTOR_BRAKING;
+            // schedule the next transition
+            motor_state_timer = get_ms_timer();
+        }
+        break;
+    case MOTOR_BRAKING:
+        // wait for prior transitions to complete
+        if (check_timer(motor_state_timer, 50)) {
             // then we idle the direction relay
             set_direction(0);
 
@@ -449,7 +448,7 @@ static void motor_state(void)
 
     case MOTOR_STOPPED:
         // wait for prior transitions to complete
-        if (check_timer(motor_state_timer, 200)) {
+        if (check_timer(motor_state_timer, 50)) {
 
             // we're stopped, and want to start.  set direction first
             if (motor_next == MOTOR_UP && get_direction() != blc->up_dir) {

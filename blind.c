@@ -514,10 +514,11 @@ static void blind_ir(void)
     case 5: // alt  (power)
             if (alt && !check_timer(alt_timer, 1000)) {
                 alt++;
-                tone_start(TONE_CHIRP);
             } else {
                 alt = 1;
             }
+
+            tone_start(TONE_CHIRP);
             alt_timer = get_ms_timer();
             return;
 

@@ -17,8 +17,12 @@
 #include "blind.h"
 #include "button.h"
 
+/*
+ * handle the pushbutton, including debouncing, and differentiating
+ * long pushes (more than a second) from short ones.
+ */
 
-#define BUTTON_DEBUG 0
+#define BUTTON_DEBUG 0  // set to 1 to enable state machine debug output
 
 /* states */
 enum {
@@ -34,50 +38,48 @@ void button_init(void)
 
 void button_process(void)
 {
-    static char button_is;
+    static char button_state;
     static long button_timer;
 
-    char button;
+    char button_down;
 
-    button = read_button();
+    button_down = read_button();
 
     if (BUTTON_DEBUG) {
-        static char last_button_is;
-        if (last_button_is != button_is) {
-            p_hex(button_is);
-            last_button_is = button_is;
+        static char last_button_state;
+        if (last_button_state != button_state) {
+            p_hex(button_state);
+            last_button_state = button_state;
         }
     }
 
-    // debouncing
-    switch (button_is) {
+    switch (button_state) {
     case BUTTON_IS_UP:
-        // Button depressed (OEMIO returns asserted/not asserted)
-        if (button) {
-            putstr("button debounce\n");
+        if (button_down) {
+            // putstr("start button debounce\n");
             button_timer = get_ms_timer();
-            button_is = BUTTON_IS_DEBOUNCING;
+            button_state = BUTTON_IS_DEBOUNCING;
         }
         break;
 
     case BUTTON_IS_DEBOUNCING:
-        if (!button) {
-            button_is = BUTTON_IS_UP;
+        if (!button_down) {  // button went up too soon
+            button_state = BUTTON_IS_UP;
             break;
         }
 
-        if (check_timer(button_timer, 50)) {
-            button_is = BUTTON_IS_DOWN;
-            // putstr("button assert\n");
+        if (check_timer(button_timer, 50)) { // it's been down 50ms
+            button_state = BUTTON_IS_DOWN;
+            // putstr("button asserted\n");
         }
         break;
 
     case BUTTON_IS_DOWN:
-        if (button)  // still down
+        if (button_down)  // still down
             break;
 
-        // released -- all actions happen on release
-        button_is = BUTTON_IS_UP;
+        // button was released -- all actions happen when it's released.
+        button_state = BUTTON_IS_UP;
 
         // check for a long press first
         if (check_timer(button_timer, 1000)) {
@@ -85,7 +87,6 @@ void button_process(void)
             // do nothing yet
             break;
         }
-
 
         // short press
         putstr("short button\n");

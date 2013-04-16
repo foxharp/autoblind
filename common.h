@@ -17,5 +17,8 @@ void monitor(void);
 
 void force_reboot(void);
 
+#ifdef USE_PRINTF
+#include <stdio.h>
+#endif
 
 // vile:noti:sw=4

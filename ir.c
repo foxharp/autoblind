@@ -170,6 +170,9 @@ ir_process(void)
     byte low;
     byte overflow;
 
+    /* the "input capture" interrupt handler will record the
+     * most recent pulse's length and polarity.
+     */
     while (pulse_length) {
 
         cli();
@@ -179,17 +182,20 @@ ir_process(void)
         overflow = had_overflow;
 
         had_overflow = 0;
+
+        // if this is non-zero at top of loop, then a new pulse arrived.
         pulse_length = 0;
 
         sei();
 
-        len *= usec_per_tick;  // ticks -> usec
+        len *= usec_per_tick;  // ticks -> microseconds
 
         // led_flash();
+
+        // if we had an overflow or a very long pulse, then the
+        // current pulse_length is meaningless -- it's just a
+        // gap, or the last remnant of a gap.
         if (overflow || len > 10000) {
-            // if we had an overflow, then the current pulse_length
-            // is meaningless -- it's just the last remnant of a
-            // long gap.
             ir_i = 0;
             ir_accum = 0;
             lastlen = 0;
@@ -219,7 +225,10 @@ ir_process(void)
             continue;
         }
 
+        // make way for a new bit
         ir_accum <<= 1;
+
+        // zero bits are short, one bits are long
         if (len > 1000)  // longer than 1 millisecond?
             ir_accum |= 1;
 
@@ -227,6 +236,7 @@ ir_process(void)
         ir_pulse[ir_i] = len;
 #endif
 
+        // if we've accumulated a full complement of bits, save it off
         if (++ir_i >= MAX_PULSES) {
             ir_code = ir_accum;
             ir_code_avail = 1;
@@ -247,7 +257,11 @@ long ir_remote_codes[] PROGMEM = {
     0
 };
 
-// wait for an IR press, and return an index into the table above
+/*
+ * wait for an IR press, and return an index into the table above.
+ * this really blocks, so ir_avail() should be called first if that's
+ * not desireable.
+ */
 char get_ir(void)
 {
     long *ircp;
@@ -255,10 +269,12 @@ char get_ir(void)
 
     while (1) {
         if (ir_code_avail) {
+
             ir_code_avail = 0;
             ircp = ir_remote_codes;
-            while(1) {
 
+            // loop through the table, and return the index on a match.
+            while(1) {
                 irc = pgm_read_dword(ircp);
                 if (!irc)
                     break;

@@ -20,9 +20,6 @@
 #include "ir.h"
 #include "blind.h"
 #include "util.h"
-#ifdef USE_PRINTF
-#include <stdio.h>
-#endif
 
 #define ctrl(c) (c ^ 0x40)
 #define DEL 0x7f
@@ -40,20 +37,24 @@ static unsigned int addr;
 static unsigned char addr_is_data;
 
 
+/* accumulate an input line, terminated with either carriage
+ * return or newline.  return true when line[] is complete.
+ */
 static char getline(void)
 {
     char c;
 
-    if (!kbhit())
+    if (!kbhit())  // don't block -- getch() would loop forever
         return 0;
 
     c = getch();
 
-    // eat leading spaces
+    // toss leading spaces
     if (l == 0 && c == ' ')
         return 0;
 
     // special for the +/-/= memory dump commands
+    // these three single-character commands don't need newline
     if (l == 0 && (c == '+' || c == '-' || c == '=')) {
         line[l++] = c;
         line[l] = '\0';
@@ -62,14 +63,14 @@ static char getline(void)
     }
 
     if (c == '\r' || c == '\n') {
-        // done
+        // done -- we have a complete line
         putch('\n');
         return 1;
     }
 
     putch(c);
 
-    // backspace
+    // check for backspace
     if (c == '\b' || c == DEL) {
         putch(' ');
         putch('\b');
@@ -78,13 +79,15 @@ static char getline(void)
         line[l] = '\0';
         return 0;
     }
-    // accumulate the character
+
+    // save the new character
     if (l < (sizeof(line) - 2)) {
         line[l++] = c;
         line[l] = '\0';
         return 0;
     }
-    // line too long
+
+    // if the line's too long, save nothing
     if (isprint(c)) {
         putch('\b');
         putch(' ');
@@ -96,13 +99,16 @@ static char getline(void)
 static int gethex(void)
 {
     int n = 0;
+
     while (isspace(line[l])) {
         l++;
     }
+
     while (isxdigit(line[l])) {
         n = (n << 4) | tohex(line[l]);
         l++;
     }
+
     return n;
 }
 
@@ -119,12 +125,12 @@ void monitor(void)
     unsigned int i, n;
     unsigned char cmd;
 
-    if (!getline())
+    if (!getline())     // do nothing until we have a line of user input
         return;
 
     l = 0;
     cmd = line[l++];
-    n = gethex();
+    n = gethex();       // fetch a numeric argument.  n will be 0 if none.
 
     switch (cmd) {
     case '\0':
@@ -245,13 +251,14 @@ void monitor(void)
         break;
 
     case 'U':
+        // print repeating 'U', which is a square wave on the transmit line
         for (i = 0; i < (80 * 20); i++)
             putch('U');
         putch('\n');
         break;
 
     case 'e':
-        // restarts the current image
+        // reboot us, using the watchdog
         wdt_enable(WDTO_250MS);
         for (;;);
         break;
@@ -267,6 +274,7 @@ void monitor(void)
 #endif
 
     case 'w':
+        // 'w addr data'
         addr = n;
         n = gethex();
         *(unsigned char *) addr = n;
@@ -274,6 +282,7 @@ void monitor(void)
 
     case 'x':                   //  read 1 byte of data
     case 'X':                   //  read 1 byte of code
+        // 'x addr' or 'X addr'
         addr = n;
         addr_is_data = (cmd == 'x');
         // fallthrough
@@ -281,25 +290,19 @@ void monitor(void)
     case '=':
     case '+':
     case '-':
+        // show the contents of the next (or previous) address
         if (cmd == '+')
             addr++;
         else if (cmd == '-')
             addr--;
 
-#if 0
-        printf("%04x: %02x\n", (uint) addr,
-               addr_is_data ?
-               (uint) * (unsigned char *) addr :
-               (uint) * (unsigned char xdata *) addr);
-#else
         puthex16(addr);
         putstr(": ");
         if (addr_is_data)
-            puthex(*(unsigned char *) addr);
+            puthex(*(unsigned char *)addr);
         else
             puthex(pgm_read_byte(addr));
         putch('\n');
-#endif
         break;
 
     default:
@@ -313,7 +316,7 @@ void monitor(void)
 
 #else
 
-// smaller version, might be useful
+// much smaller version, might be useful someday
 
 void monitor(void)
 {

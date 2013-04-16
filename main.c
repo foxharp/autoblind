@@ -25,15 +25,9 @@
 void __do_copy_data(void) { }
 #endif
 
-volatile byte mcusr_mirror;
-void get_mcusr(void)
-{
-    mcusr_mirror = MCUSR;
-    MCUSR = 0;
-    wdt_disable();
-}
+byte saved_mcusr;
 
-void hardware_setup(void)
+void cpu_setup(void)
 {
 
     // eliminate div-by-8 (no-op if 'div by 8' clock fuse not programmed)
@@ -47,18 +41,21 @@ void hardware_setup(void)
 
 int main()
 {
-    get_mcusr();
-    init_led();
-    blind_init();
-    blinky();
+    saved_mcusr = MCUSR; // save the reset reason, in case we need it
+    MCUSR = 0;
+    wdt_disable(); // disable the watchdog early
 
-    hardware_setup();
+    init_led();
+    blinky();       // blinky just flashes the LED, to show we're alive
+
+    cpu_setup();
 
     util_init();
     button_init();
     init_timer();
     suart_init();
     ir_init();
+    blind_init();
 
     sei();
 
@@ -68,6 +65,11 @@ int main()
 
     wdt_enable(WDTO_4S);
 
+    /* this loop runs forever.  the routines called here
+     * must not block -- they act via state machines that
+     * react to interrupt events (i.e., input from the user
+     * or senors) and timer expirations.
+     */
     while (1) {
         wdt_reset();
 #ifndef NO_MONITOR

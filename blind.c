@@ -16,6 +16,18 @@
 #include "blind.h"
 #include "ir.h"
 
+/*
+ * two different state machines drive the window blind.
+ * 1) the lower level state machine is in charge of the motor,
+ *   and attempts to keep it from being turned on and off too
+ *   quickly, or thrown from forward into reverse while running,
+ *   etc.  save mechanical operation, in other words.
+ * 2) the higher level state machine represents the motion of the
+ *   blind, and controls its operation based on user input, soft
+ *   and "hard" limits, etc.  it calls into the motor state machine
+ *   to actually do anything.
+ */
+
 #define STATE_DEBUG 0
 #define MOTOR_DEBUG 0
 
@@ -27,6 +39,12 @@
 #define P_MOTOR_TURN    PA2
 #define P_LIMIT         PA3
 
+
+/*
+ * for the motor state machine, we set motor_next to the state we
+ * wish the motor to advance to.  the state machine churns until
+ * motor_cur is equal to motor_next, and then it stops changing.
+ */
 enum {
     MOTOR_STOPPED = 0,
     MOTOR_STOPPING,
@@ -37,9 +55,13 @@ enum {
 };
 static char motor_cur, motor_next;
 static long motor_state_timer;
-static long position_change_timer;
-static char position_changed;
 
+/*
+ * the blind state machine is a little different.  "blind_do" can
+ * be thought of as an event, and "blind_is" represents the current
+ * state of the blind.  the state machine reacts to "blind_do", causing
+ * changes in "blind_is".
+ */
 enum {
     BLIND_STOP = 0,
     BLIND_UP,
@@ -61,9 +83,25 @@ enum {
 };
 static char blind_is;
 
-static int goal;
-static int ignore_limit;
 
+// our desired position
+static int goal;
+
+// once we hit the limit switch, we stop, and wouldn't be able to
+// start again.  we allow ourselves to move a distance of
+// "ignore_limit" before paying attention to the switch again.
+static int ignore_limit;    
+
+// we want to save our more recent position in non-volatile memory,
+// so that we still know where the blind is after a power failure.
+// we do the save 30 seconds after the last movement stopped.
+static long position_change_timer;
+static char position_changed;
+
+// this structure describes the data stored in non-volatile memory.
+// best not to rearrange it, but unless the "keep eeprom" fuse is
+// burnt in the processor, then the EEPROM is erased when a new
+// program is written anyway, so it doesn't matter much.
 struct blind_config {
     int top_stop;
     int bottom_stop;
@@ -72,15 +110,22 @@ struct blind_config {
     int padding[4];
 } blc[1];
 
-#define NOMINAL_PEAK 200
-
-// inches = pulses * diameter * pi
-// pulses = inches / (diameter * pi)
-// pulses = in / ( 3.15 * .2)
-// pulses = in / .63 
+/*
+ * convert spool revolutions to inches of travel of the blind:
+ *   inches = pulses * diameter * pi
+ *   pulses = inches / (diameter * pi)
+ *   pulses = inches / ( 3.15 * .2)
+ *   pulses = inches / .63 
+ */
 #define inch_to_pulse(in)  (100 * (in) / 63)
 
+#define NOMINAL_PEAK inch_to_pulse(18)
+
+// this is where user commands end up, whether from IR, the
+// button, or from monitor().
 char blind_cmd;
+
+// we print the blind's position to the serial port once per second
 char do_blind_report;
 
 /* I/O -- read the limit switch, control the motors */
@@ -136,6 +181,9 @@ char blind_at_limit(void)
     return !(PINMOTOR & bit(P_LIMIT));
 }
 
+
+/* non-volatile memory -- read and save eeprom */
+
 void blind_read_config(void)
 {
     int i;
@@ -171,6 +219,8 @@ void blind_save_config(void)
     eeprom_update_block((void *)blc, (void *)0, sizeof(*blc));
 }
 
+
+/* initilization */
 void blind_init(void)
 {
     PORTMOTOR &= ~(bit(P_MOTOR_ON) | bit(P_MOTOR_DIR));
@@ -189,6 +239,10 @@ void blind_init(void)
     goal = inch_to_pulse(10);
 }
 
+
+/* manage the shaft rotation interrupt, which lets us keep
+ * track of where the blind is.
+ */
 static int get_position(void)
 {
     int p;
@@ -200,8 +254,7 @@ static int get_position(void)
     return p;
 }
 
-/* mainly for debug, for use from monitor */
-void blind_set_position(int p)
+void blind_set_position(int p) // mainly for debug, for use from monitor
 {
     cli();
     blc->position = p;
@@ -229,6 +282,8 @@ ISR(INT1_vect)          // rotation pulse
     position_changed = 1;
 }
 
+
+/* control the motor, both on/off and direction */
 static void stop_moving(void)
 {
     putstr("stop_moving\n");
@@ -247,6 +302,10 @@ static void start_moving_down(void)
     motor_next = MOTOR_DOWN;
 }
 
+
+/*
+ * the blind state machine
+ */
 static void blind_state(void)
 {
     static char recent_motion;
@@ -381,6 +440,10 @@ static void blind_state(void)
     blind_do = next_do;
 }
 
+
+/*
+ * the motor state machine
+ */
 static void motor_state(void)
 {
 
@@ -470,6 +533,9 @@ static void motor_state(void)
     }
 }
 
+/*
+ * translate incoming IR remote button presses to blind commands
+ */
 static void blind_ir(void)
 {
     char cmd;
@@ -485,29 +551,29 @@ static void blind_ir(void)
     case 0: // up
             if (alt && !check_timer(alt_timer, 1000)) {
                 if (alt == 1)
-                    blind_cmd = BL_FORCE_UP;
+                    do_blind_cmd(BL_FORCE_UP);
                 else
-                    blind_cmd = BL_SET_TOP;
+                    do_blind_cmd(BL_SET_TOP);
                 tone_start(TONE_CONFIRM);
             } else {
-                blind_cmd = BL_GO_UP;
+                do_blind_cmd(BL_GO_UP);
             }
             break;
 
     case 1: // down
             if (alt && !check_timer(alt_timer, 1000)) {
                 if (alt == 1)
-                    blind_cmd = BL_FORCE_DOWN;
+                    do_blind_cmd(BL_FORCE_DOWN);
                 else
-                    blind_cmd = BL_SET_BOTTOM;
+                    do_blind_cmd(BL_SET_BOTTOM);
                 tone_start(TONE_CONFIRM);
             } else {
-                blind_cmd = BL_GO_DOWN;
+                do_blind_cmd(BL_GO_DOWN);
             }
             break;
 
     case 4: // stop  (center)
-            blind_cmd = BL_STOP;
+            do_blind_cmd(BL_STOP);
             break;
 
     case 5: // alt  (power)
@@ -522,7 +588,7 @@ static void blind_ir(void)
             return;
 
     case 2: // left
-            blind_cmd = BL_ONE_BUTTON;
+            do_blind_cmd(BL_ONE_BUTTON);
             break;
     }
     alt_timer = 0;
@@ -542,6 +608,9 @@ static char blind_get_cmd(void)
     return cmd;
 }
 
+/*
+ * get commands and drive the blind and motor state machine
+ */
 void blind_process(void)
 {
 

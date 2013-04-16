@@ -18,10 +18,10 @@
 #ifdef USE_PRINTF
 #include <stdio.h>
 
+/* set up the plumbing for printf(), so it calls our character
+ * output routine */
 static int stdio_putchar(char c, FILE *stream);
-
 static FILE mystdout = FDEV_SETUP_STREAM(stdio_putchar, NULL, _FDEV_SETUP_WRITE);
-
 static int
 stdio_putchar(char c, FILE *stream)
 {
@@ -30,6 +30,7 @@ stdio_putchar(char c, FILE *stream)
 }
 #endif
 
+// print a single byte as hex
 void puthex(unsigned char i)
 {
     unsigned char j;
@@ -69,14 +70,21 @@ void putdec16(unsigned int i)
 }
 
 #if ! ALL_STRINGS_PROGMEM
+/* if not all strings are in program memory, then we need
+ * different printing routines for each type.  otherwise,
+ * we only need a routine that uses pgm_read_byte() to
+ * fetch the string.
+ */
 void putstr(const prog_char * s)    // send string
 {
     while (*s)
         putch(*s++);
 }
-#endif
 
 void putstr_p(const prog_char * s)
+#else
+void putstr(const prog_char * s)
+#endif
 {
     char c;
     while ((c = pgm_read_byte(s++)))
@@ -85,27 +93,16 @@ void putstr_p(const prog_char * s)
 
 
 /*
- * output signalling:  LED and tone
+ * LED
  */
-
 static long led_time;
-
-static long tone_time;
-static int tone_duration;
-char tone_on, tonecnt;
 
 void init_led(void)
 {
-    DDRLED |= bit(BITLED);  // LED
+    DDRLED |= bit(BITLED);  // set to output
 }
 
-void led_handle(void)
-{
-    /* turn off LED flash */
-    if (led1_is_on() && check_timer(led_time, 100))
-        led1_off();
-}
-
+/* commence a timed flash */
 void led_flash(void)
 {
     led1_on();
@@ -113,10 +110,26 @@ void led_flash(void)
     return;
 }
 
+/* turn off a timed LED flash */
+void led_handle(void)
+{
+    if (led1_is_on() && check_timer(led_time, 100))
+        led1_off();
+}
+
+
+/*
+ * tones
+ */
+static long tone_time;
+static int tone_duration;
+char tone_on, tonecnt;
+
 void tone_hw_enable(void)
 {
+    // we drive the piezo buzzer with two gpio pins, in push-pull mode
     DDRTONE |= TONEBITS;
-    // the two bits are kept different, and are both flipped when we cycle
+    // init one bit high, the other low -- both are flipped when we cycle
     PORTTONE |= ONE_TONEBIT;
 }
 void tone_hw_disable(void)
@@ -146,7 +159,8 @@ void tone_handle(void)
 }
 
 /*
- * delay - wait a bit
+ * delay - wait a bit.  this simply busy-waits, so it shouldn't
+ *  be used much, if ever.
  */
 void
 delay(word dly)
@@ -160,12 +174,12 @@ delay(word dly)
 }
 
 /*
- * wiggling light pattern, to show life at startup.
- * useful for visually detecting watchdog or crash.
- * uses a delay loop -- so don't call it later.
+ * wiggling light pattern, to show life at startup.  this is
+ * useful for visually detecting a watchdog reset or crash.  uses
+ * a delay loop -- so don't call it after the system is up and
+ * running.
  */
-void
-blinky(void)
+void blinky(void)
 {
     byte i;
     for (i = 0; i < 12; i++) {
@@ -174,8 +188,7 @@ blinky(void)
     }
 }
 
-void
-do_debug_out(void)
+void do_debug_out(void)
 {
     /* a square wave is useful for debugging baud rate issues */
     while (1) putch('U');
@@ -184,8 +197,7 @@ do_debug_out(void)
 }
 
 
-void
-util_init(void)
+void util_init(void)
 {
 #ifdef USE_PRINTF
     stdout = &mystdout;

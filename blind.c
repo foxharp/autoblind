@@ -338,6 +338,7 @@ static void blind_state(void)
             blind_is = BLIND_IS_AT_LIMIT;
             // we hit the limit going the wrong direction 
             blc->up_dir = !blc->up_dir;
+            blind_save_config();
         } else if (blind_do == BLIND_DOWN) {
             start_moving_down();
             blind_is = BLIND_IS_FALLING;
@@ -359,7 +360,7 @@ static void blind_state(void)
         } else if (blind_do == BLIND_FORCE_UP) {
             start_moving_up();
             blind_is = BLIND_IS_RISING;
-            goal = get_position() + inch_to_pulse(6);
+            goal = get_position() + inch_to_pulse(8);
         }
         break;
 
@@ -372,7 +373,7 @@ static void blind_state(void)
         } else if (blind_do == BLIND_FORCE_DOWN) {
             start_moving_down();
             blind_is = BLIND_IS_FALLING;
-            goal = get_position() - inch_to_pulse(3);
+            goal = get_position() - inch_to_pulse(18);
         }
         break;
     }
@@ -548,7 +549,7 @@ void blind_process(void)
 
     // save current position 30 seconds after it stops changing
     if (position_changed &&
-            check_timer(position_change_timer, (long)30*1000*1000)) {
+            check_timer(position_change_timer, 30*1000)) {
         blind_save_config();
         position_changed = 0;
     }
@@ -590,10 +591,12 @@ void blind_process(void)
 
     case BL_SET_TOP:
         blc->top_stop = get_position();
+        blind_save_config();
         break;
 
     case BL_SET_BOTTOM:
         blc->bottom_stop = get_position();
+        blind_save_config();
         break;
 
     case BL_FORCE_UP:

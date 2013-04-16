@@ -48,7 +48,6 @@ void hardware_setup(void)
 int main()
 {
     get_mcusr();
-    init_debug();
     init_led();
     blind_init();
     blinky();
@@ -65,7 +64,7 @@ int main()
 
     blind_read_config();
 
-    if (do_debug()) do_debug_out();   // no return
+    if (read_button()) do_debug_out();   // no return
 
     wdt_enable(WDTO_4S);
 

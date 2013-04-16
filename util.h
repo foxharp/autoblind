@@ -20,14 +20,7 @@ void putstr(const char *s);
 #define putstr(s) putstr_p(s)
 #endif
 
-/* ground this i/o pin to enable early debug mode */
-#define PORTDEBUG PORTB
-#define PINDEBUG PINB
-#define PDEBUG PB2
-#define init_debug() {PORTDEBUG |= bit(PDEBUG);} // enable pullup
-#define do_debug()  ((PINDEBUG & bit(PDEBUG)) == 0)
 void do_debug_out(void);
-
 
 /* LED control */
 # define DDRLED DDRB

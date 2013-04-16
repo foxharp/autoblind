@@ -15,18 +15,10 @@
 #include "timer.h"
 #include "util.h"
 #include "blind.h"
+#include "button.h"
 
 
 #define BUTTON_DEBUG 0
-
-/*
- * pushbutton gpio pin -- note that this is shared with the
- * "early debug" pin defined in util.c/util.h
- */
-#define BUTTON_PORT         PORTB
-#define BUTTON_PIN          PINB
-#define BUTTON_BIT          PB2 // input:  from IR receiver
-#define read_button()       !(BUTTON_PIN & bit(BUTTON_BIT))
 
 /* states */
 enum {

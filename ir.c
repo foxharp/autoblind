@@ -33,7 +33,7 @@
 #include "common.h"
 #include "util.h"
 
-// #define PULSE_DEBUG 1
+#define PULSE_DEBUG 0
 
 /*
  * GPIO usage.  the input needs to come from a pin with a timer
@@ -56,12 +56,12 @@ volatile word pulse_length;
 volatile byte pulse_is_low;
 volatile byte had_overflow;
 
-#define MAX_PULSES 32
+#define MAX_PULSES 31
 byte ir_i;
 long ir_accum, ir_code;
 char ir_code_avail;
 
-#ifdef PULSE_DEBUG
+#if PULSE_DEBUG
 word ir_pulse[MAX_PULSES];  // there's a header on the front
 #endif
 
@@ -71,11 +71,11 @@ word ir_pulse[MAX_PULSES];  // there's a header on the front
  *  longest interval we need to record using ICR0, which is
  *  something like .25 sec.  we also need to convert from
  *  timer count intervals to 16384'ths of a second.
- *     
+ *
  *  14.7456Mhz
  *     14745600 counts/sec, prescaled by 256, gives 57600 counts/sec,
  *     or 17.36usec/count, times 65536 gives overflow at 1.14sec.  good.
- *     want 16384'ths:  scale count by 16384 / 57600. ( 4096 / 14400 ) 
+ *     want 16384'ths:  scale count by 16384 / 57600. ( 4096 / 14400 )
  *
  *  12.0000Mhz
  *     12000000 counts/sec, prescaled by 256, gives 46875 counts/sec,
@@ -200,8 +200,8 @@ ir_process(void)
             ir_accum = 0;
             lastlen = 0;
             continue;
-        } 
-        
+        }
+
         // there's a header of low/high of about 4500usec each
         if (!low &&
             5000 > len     && len > 4000 &&
@@ -213,13 +213,13 @@ ir_process(void)
             continue;
         }
         lastlen = len;
-        
+
         if (low) {
             // i don't care about the low pulses right now.
             // for my chosen remote, there's no information in
             // them -- the low pulses are just spacers.
             continue;
-        } 
+        }
 
         if (ir_i >= MAX_PULSES) { // we've gotten too many bits
             continue;
@@ -229,10 +229,14 @@ ir_process(void)
         ir_accum <<= 1;
 
         // zero bits are short, one bits are long
-        if (len > 1000)  // longer than 1 millisecond?
+        if (len > 1000)  { // longer than 1 millisecond?
+            // putch('1');
             ir_accum |= 1;
+        } else {
+            // putch('0');
+        }
 
-#ifdef PULSE_DEBUG
+#if PULSE_DEBUG
         ir_pulse[ir_i] = len;
 #endif
 
@@ -244,16 +248,22 @@ ir_process(void)
     }
 }
 
-/* codes for my X10 "TV buddy" bottle-opener remote turns out
- * it's a programmable remote, so this just happens to be the
- * current programming.  */
+#define Nbut 6
 long ir_remote_codes[] PROGMEM = {
-    0xe0e048b7,     // up (P+)
-    0xe0e008f7,     // down (P-)
-    0xe0e0d02f,     // left (V-)
-    0xe0e0e01f,     // right (V+)
-    0xe0e0f00f,     // center (mute)
-    0xe0e040bf,     // power
+    // pgf's X-10 "tv buddy" remote (as currently programed)
+    0x7070245b,     // up (P+)
+    0x7070047b,     // down (P-)
+    0x70706817,     // left (V-)
+    0x7070700f,     // right (V+)
+    0x70707807,     // center (mute)
+    0x7070205f,     // power
+    // samsung tv remote
+    0x7070037c,     // up
+    0x7070433c,     // down
+    0x7070532c,     // left
+    0x7070235c,     // right
+    0x70700b74,     // enter
+    0x70705a25,     // exit
     0
 };
 
@@ -266,6 +276,7 @@ char get_ir(void)
 {
     long *ircp;
     long irc;
+    int ir;
 
     while (1) {
         if (ir_code_avail) {
@@ -276,11 +287,15 @@ char get_ir(void)
             // loop through the table, and return the index on a match.
             while(1) {
                 irc = pgm_read_dword(ircp);
-                if (!irc)
-                    break;
+                if (!irc) {
+                    p_hex32(ir_code);
+                    return -1;
+                }
 
                 if (ir_code == irc) {
-                    return ircp - ir_remote_codes;
+                    ir = (ircp - ir_remote_codes) % 6;
+                    p_hex(ir);
+                    return ir;
                 }
 
                 ircp++;
@@ -291,7 +306,7 @@ char get_ir(void)
 
 void ir_show_code(void)
 {
-#ifdef PULSE_DEBUG
+#if PULSE_DEBUG
     byte i;
     for (i = 0; i < MAX_PULSES; i++) {
         puthex(i);

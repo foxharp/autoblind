@@ -586,10 +586,6 @@ static void blind_ir(void)
             tone_start(TONE_CHIRP);
             alt_timer = get_ms_timer();
             return;
-
-    case 2: // left
-            do_blind_cmd(BL_ONE_BUTTON);
-            break;
     }
     alt_timer = 0;
     alt = 0;

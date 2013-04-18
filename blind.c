@@ -548,7 +548,7 @@ static void blind_ir(void)
     cmd = get_ir();
 
     switch (cmd) {
-    case 0: // up
+    case IR_UP:
             if (alt && !check_timer(alt_timer, 1000)) {
                 if (alt == 1)
                     do_blind_cmd(BL_FORCE_UP);
@@ -560,7 +560,7 @@ static void blind_ir(void)
             }
             break;
 
-    case 1: // down
+    case IR_DOWN:
             if (alt && !check_timer(alt_timer, 1000)) {
                 if (alt == 1)
                     do_blind_cmd(BL_FORCE_DOWN);
@@ -572,11 +572,11 @@ static void blind_ir(void)
             }
             break;
 
-    case 4: // stop  (center)
+    case IR_STOP:
             do_blind_cmd(BL_STOP);
             break;
 
-    case 5: // alt  (power)
+    case IR_ALT:
             if (alt && !check_timer(alt_timer, 1000)) {
                 alt++;
             } else {

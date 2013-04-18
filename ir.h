@@ -15,4 +15,10 @@ char get_ir(void);
 extern char ir_code_avail;
 #define ir_avail()  (ir_code_avail)
 
+enum {
+    IR_UP,
+    IR_DOWN,
+    IR_STOP,
+    IR_ALT,
+};
 // vile:noti:sw=4

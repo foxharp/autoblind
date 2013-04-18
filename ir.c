@@ -266,32 +266,32 @@ ir_process(void)
     }
 }
 
-#define Nbut 6
+#define Nbut 4
 long ir_remote_codes[] PROGMEM = {
     // pgf's X-10 "tv buddy" remote (as currently programed)
-    0x7070245b,     // up (P+)
-    0x7070047b,     // down (P-)
-    0x70706817,     // left (V-)
-    0x7070700f,     // right (V+)
-    0x70707807,     // center (mute)
-    0x7070205f,     // power
+    0x7070245b,     // up (P+)          [IR_UP   ]
+    0x7070047b,     // down (P-)        [IR_DOWN ]
+    0x70707807,     // center (mute)    [IR_STOP ]
+    0x7070205f,     // power            [IR_ALT  ]
+    // 0x70706817,     // left (V-)
+    // 0x7070700f,     // right (V+)
 
     // samsung tv remote
-    0x7070037c,     // up
-    0x7070433c,     // down
-    0x7070532c,     // left
-    0x7070235c,     // right
-    0x70700b74,     // enter
-    0x70705a25,     // exit
+    0x7070037c,     // up               [IR_UP   ]
+    0x7070433c,     // down             [IR_DOWN ]
+    0x70700b74,     // enter            [IR_STOP ]
+    0x70705a25,     // exit             [IR_ALT  ]
+    // 0x7070532c,     // left
+    // 0x7070235c,     // right
 
     // sony video8
-    0xd9c,          // rew
+    0xd9c,          // rew              [IR_UP   ]
+    0x19c,          // stop             [IR_DOWN ]
+    0x59c,          // play             [IR_STOP ]
+    0x5bc,          // data             [IR_ALT  ]
     // 0x39c,          // ff
-    0x19c,          // stop
-    0x99c,          // pause
-    0xc5c,          // slow
-    0x59c,          // play
-    0x5bc,          // data
+    // 0x99c,          // pause
+    // 0xc5c,          // slow
     0
 };
 

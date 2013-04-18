@@ -34,7 +34,7 @@
 #include "common.h"
 #include "util.h"
 
-#define PULSE_DEBUG 0
+#define PULSE_DEBUG 1
 
 /*
  * GPIO usage.  the input needs to come from a pin with a timer
@@ -56,14 +56,16 @@
 volatile word pulse_length;
 volatile byte pulse_is_low;
 volatile byte had_overflow;
+volatile byte max_pulses;
+volatile byte use_low;
 
-#define MAX_PULSES 31
+#define MAX_PULSES 32
 byte ir_i;
 long ir_accum, ir_code;
 char ir_code_avail;
 
 #if PULSE_DEBUG
-word ir_pulse[MAX_PULSES];  // there's a header on the front
+word ir_pulse[MAX_PULSES];
 #endif
 
 
@@ -147,7 +149,7 @@ ISR(TIMER0_CAPT_vect, ISR_NOBLOCK)
     pulse_length = OCR0A | (OCR0B << 8); // aka ICR0
 
     // if we captured a rising edge, the pulse was low
-    pulse_is_low = (TCCR0A & bit(ICES0));
+    pulse_is_low = !!(TCCR0A & bit(ICES0));
 
     // restart the timer
     TCNT0H = 0;
@@ -203,11 +205,26 @@ ir_process(void)
             continue;
         }
 
-        // there's a header of low/high of about 4500usec each
+        // this clearly won't scale -- header and bit identification
+        // will need to be table driven if i get more remote types.
+        // lircd.conf files will help.
         if (!low &&
-            5000 > len     && len > 4000 &&
-            5000 > lastlen && lastlen > 4000) {
-            // it's a header
+            // there's a header of low/high of about 4500usec each (samsung)
+               ((5000 > len     && len > 4000 &&
+                 5000 > lastlen && lastlen > 4000 ) ||
+            // or there's a header of low/high 2500/500usec (sony)
+                (750 > len     && len > 250 &&
+                 3000 > lastlen && lastlen > 2000 ))
+            )
+        {
+            // putch('H');
+            if (1000 > len) {
+                use_low = 1;
+                max_pulses = 12;
+            } else {
+                use_low = 0;
+                max_pulses = 31;
+            }
             ir_i = 0;
             ir_accum = 0;
             lastlen = 0;
@@ -215,14 +232,14 @@ ir_process(void)
         }
         lastlen = len;
 
-        if (low) {
-            // i don't care about the low pulses right now.
-            // for my chosen remote, there's no information in
-            // them -- the low pulses are just spacers.
+        if (use_low ^ low) {
+            // i don't care about half the pulses.  for my chosen
+            // remotes, there's no information in them -- either
+            // the low pulses or high pulses are just spacers.
             continue;
         }
 
-        if (ir_i >= MAX_PULSES) { // we've gotten too many bits
+        if (ir_i >= max_pulses) { // we've gotten too many bits
             continue;
         }
 
@@ -242,7 +259,7 @@ ir_process(void)
 #endif
 
         // if we've accumulated a full complement of bits, save it off
-        if (++ir_i >= MAX_PULSES) {
+        if (++ir_i >= max_pulses) {
             ir_code = ir_accum;
             ir_code_avail = 1;
         }
@@ -258,6 +275,7 @@ long ir_remote_codes[] PROGMEM = {
     0x7070700f,     // right (V+)
     0x70707807,     // center (mute)
     0x7070205f,     // power
+
     // samsung tv remote
     0x7070037c,     // up
     0x7070433c,     // down
@@ -265,6 +283,15 @@ long ir_remote_codes[] PROGMEM = {
     0x7070235c,     // right
     0x70700b74,     // enter
     0x70705a25,     // exit
+
+    // sony video8
+    0xd9c,          // rew
+    // 0x39c,          // ff
+    0x19c,          // stop
+    0x99c,          // pause
+    0xc5c,          // slow
+    0x59c,          // play
+    0x5bc,          // data
     0
 };
 
@@ -289,13 +316,13 @@ char get_ir(void)
             while(1) {
                 irc = pgm_read_dword(ircp);
                 if (!irc) {
-                    p_hex32(ir_code);
+                    p_hex32(ir_code); crnl();
                     return -1;
                 }
 
                 if (ir_code == irc) {
                     ir = (ircp - ir_remote_codes) % 6;
-                    p_hex(ir);
+                    p_hex(ir); crnl();
                     return ir;
                 }
 

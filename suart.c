@@ -15,6 +15,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
+#include <avr/wdt.h>
 #include "common.h"
 #include "timer.h"
 #include "suart.h"
@@ -98,7 +99,7 @@ void suart_init(void)
 unsigned char getch(void)       // get byte
 {
     while (!srx_done)           // wait until byte received
-        /* loop */ ;
+        wdt_reset();
     srx_done = 0;
     return srx_data;
 }

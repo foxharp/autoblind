@@ -30,6 +30,7 @@
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include <avr/sleep.h>
+#include <avr/wdt.h>
 #include "common.h"
 #include "util.h"
 
@@ -301,6 +302,7 @@ char get_ir(void)
                 ircp++;
             }
         }
+        wdt_reset();
     }
 }
 

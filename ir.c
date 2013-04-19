@@ -32,6 +32,7 @@
 #include <avr/sleep.h>
 #include <avr/wdt.h>
 #include "common.h"
+#include "timer.h"
 #include "util.h"
 
 #define PULSE_DEBUG 1
@@ -275,8 +276,19 @@ char get_ir(void)
 
     while (1) {
         if (ir_code_avail) {
+            static long dup_timer;
+            static long last_ir_code;
 
             ir_code_avail = 0;
+
+            if (!check_timer(dup_timer, 130) && last_ir_code == ir_code) {
+                dup_timer = get_ms_timer();
+                return -1;
+            }
+
+            dup_timer = get_ms_timer();
+            last_ir_code = ir_code;
+
             ircp = ir_remote_codes;
 
             // loop through the table, and return the index on a match.

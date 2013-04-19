@@ -191,7 +191,7 @@ ir_process(void)
                 max_pulses = 12;
             } else {
                 use_low = 0;
-                max_pulses = 31;
+                max_pulses = 32;
             }
             ir_i = 0;
             ir_accum = 0;
@@ -237,30 +237,31 @@ ir_process(void)
 #define Nbut 4
 long ir_remote_codes[] PROGMEM = {
     // pgf's X-10 "tv buddy" remote (as currently programed)
-    0x7070245b,     // up (P+)          [IR_UP   ]
-    0x7070047b,     // down (P-)        [IR_DOWN ]
-    0x70707807,     // center (mute)    [IR_STOP ]
-    0x7070205f,     // power            [IR_ALT  ]
-    // 0x70706817,     // left (V-)
-    // 0x7070700f,     // right (V+)
+    0xe0e048b7,     // up (P+)          [IR_UP   ]
+    0xe0e008f7,     // down (P-)        [IR_DOWN ]
+    0xe0e0f00f,     // center (mute)    [IR_STOP ]
+    0xe0e040bf,     // power            [IR_ALT  ]
+    // 0xe0e0d02f,     // left (V-)
+    // 0xe0e0e01f,     // right (V+)
 
     // samsung tv remote
-    0x7070037c,     // up               [IR_UP   ]
-    0x7070433c,     // down             [IR_DOWN ]
-    0x70700b74,     // enter            [IR_STOP ]
-    0x70705a25,     // exit             [IR_ALT  ]
-    // 0x7070532c,     // left
-    // 0x7070235c,     // right
+    0xe0e006f9 ,     // up               [IR_UP   ]
+    0xe0e08679 ,     // down             [IR_DOWN ]
+    0xe0e016e9 ,     // enter            [IR_STOP ]
+    0xe0e0b44b ,     // exit             [IR_ALT  ]
+    // 0xe0e0a659 ,     // left
+    // 0xe0e046b9 ,     // right
 
     // sony video8
-    0xd9c,          // rew              [IR_UP   ]
-    0x19c,          // stop             [IR_DOWN ]
-    0x59c,          // play             [IR_STOP ]
-    0x5bc,          // data             [IR_ALT  ]
-    // 0x39c,          // ff
-    // 0x99c,          // pause
-    // 0xc5c,          // slow
+    0xd9c,           // rew              [IR_UP   ]
+    0x19c,           // stop             [IR_DOWN ]
+    0x59c,           // play             [IR_STOP ]
+    0x5bc,           // data             [IR_ALT  ]
+    // 0x39c,           // ff
+    // 0x99c,           // pause
+    // 0xc5c,           // slow
     0
+
 };
 
 /*

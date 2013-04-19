@@ -48,14 +48,15 @@
 #define IR_high()       (IR_PIN & bit(IR_BIT))
 
 // prescaler values for TCCR0B
+#define CLKDIV_1    1
 #define CLKDIV_8    2
 #define CLKDIV_64   3
 #define CLKDIV_256  4
 #define CLKDIV_1024 5
 
-volatile word pulse_length;
-volatile byte pulse_is_low;
-volatile byte had_overflow;
+volatile word capture_len;
+volatile byte capture_is_low;
+volatile byte capture_overflow;
 volatile byte max_pulses;
 volatile byte use_low;
 
@@ -69,40 +70,7 @@ word ir_pulse[MAX_PULSES];
 #endif
 
 
-/*
- *  we want the timer overflow to be (a lot) longer than the
- *  longest interval we need to record using ICR0, which is
- *  something like .25 sec.  we also need to convert from
- *  timer count intervals to 16384'ths of a second.
- *
- *  14.7456Mhz
- *     14745600 counts/sec, prescaled by 256, gives 57600 counts/sec,
- *     or 17.36usec/count, times 65536 gives overflow at 1.14sec.  good.
- *     want 16384'ths:  scale count by 16384 / 57600. ( 4096 / 14400 )
- *
- *  12.0000Mhz
- *     12000000 counts/sec, prescaled by 256, gives 46875 counts/sec,
- *     or 21.33usec/count, times 65536 gives overflow at 1.40sec.  good.
- *     want 16384'ths:  scale count by 16384 / 46875. ( 4096 / 11719 )
- *
- *  11.0592
- *     11059200 counts/sec, prescaled by 256, gives 43200 counts/sec,
- *     or 23.15usec/count, times 65536 gives overflow at 1.51sec.  good.
- *     want 16384'ths:  scale count by 16384 / 43200. ( 4096 / 10800 )
- *
- *  8.0000Mhz
- *     8000000 counts/sec, prescaled by 256, gives 31250 counts/sec,
- *     or 32usec/count, times 65536 gives overflow at 2.09sec.  good.
- *     want 16384'ths:  scale count by 16384 / 31250. ( 4096 / 7812 )
- *
- *  3.6864Mhz
- *     3686400/256 --> 14400, so scale by 16384 / 14400 --> 4096 / 3600
- *
- *  so for (almost) all clock rates, prescaling by 256 seems right.
- *
- */
-
-#define usec_per_tick (256 * 1000000 / F_CPU)
+#define usec_per_tick 1
 
 /*
  * set up initial chip conditions
@@ -116,7 +84,12 @@ ir_init(void)
     // input capture enable, 16 bit mode, and noise canceller
     TCCR0A = bit(ICEN0)|bit(TCW0); // |bit(ICNC0);
 
-    TCCR0B = CLKDIV_256;        // see comments above
+    // run the timer at 1usec/tick
+#if F_CPU == 1000000
+    TCCR0B = CLKDIV_1;
+#elif F_CPU == 8000000
+    TCCR0B = CLKDIV_8;
+#endif
 
     // start the timer
     TCNT0H = 0;
@@ -135,7 +108,7 @@ ir_init(void)
  */
 ISR(TIMER0_OVF_vect)
 {
-    had_overflow = 1;
+    capture_overflow = 1;
 }
 
 /*
@@ -146,10 +119,10 @@ ISR(TIMER0_OVF_vect)
 ISR(TIMER0_CAPT_vect, ISR_NOBLOCK)
 {
     // save the captured time interval
-    pulse_length = OCR0A | (OCR0B << 8); // aka ICR0
+    capture_len = OCR0A | (OCR0B << 8); // aka ICR0
 
     // if we captured a rising edge, the pulse was low
-    pulse_is_low = !!(TCCR0A & bit(ICES0));
+    capture_is_low = !!(TCCR0A & bit(ICES0));
 
     // restart the timer
     TCNT0H = 0;
@@ -176,18 +149,18 @@ ir_process(void)
     /* the "input capture" interrupt handler will record the
      * most recent pulse's length and polarity.
      */
-    while (pulse_length) {
+    while (capture_len) {
 
         cli();
         // capture length, polarity, and overflow data with interrupts off
-        len = pulse_length;
-        low = pulse_is_low;
-        overflow = had_overflow;
+        len = capture_len;
+        low = capture_is_low;
+        overflow = capture_overflow;
 
-        had_overflow = 0;
+        capture_overflow = 0;
 
         // if this is non-zero at top of loop, then a new pulse arrived.
-        pulse_length = 0;
+        capture_len = 0;
 
         sei();
 
@@ -196,7 +169,7 @@ ir_process(void)
         // led_flash();
 
         // if we had an overflow or a very long pulse, then the
-        // current pulse_length is meaningless -- it's just a
+        // current capture_len is meaningless -- it's just a
         // gap, or the last remnant of a gap.
         if (overflow || len > 10000) {
             ir_i = 0;
@@ -205,17 +178,11 @@ ir_process(void)
             continue;
         }
 
-        // this clearly won't scale -- header and bit identification
-        // will need to be table driven if i get more remote types.
-        // lircd.conf files will help.
-        if (!low &&
-            // there's a header of low/high of about 4500usec each (samsung)
-               ((5000 > len     && len > 4000 &&
-                 5000 > lastlen && lastlen > 4000 ) ||
-            // or there's a header of low/high 2500/500usec (sony)
-                (750 > len     && len > 250 &&
-                 3000 > lastlen && lastlen > 2000 ))
-            )
+#define near(val, ref) ((ref + ref/6) > val && val > (ref - ref/6))
+
+        if ( !low &&
+            ((near(lastlen, 4850) && near(len, 4550)) ||  // samsung
+             (near(lastlen, 2650) && near(len, 500))) )  // sony)
         {
             // putch('H');
             if (1000 > len) {
@@ -321,7 +288,7 @@ char get_ir(void)
                 }
 
                 if (ir_code == irc) {
-                    ir = (ircp - ir_remote_codes) % 6;
+                    ir = (ircp - ir_remote_codes) % Nbut;
                     p_hex(ir); crnl();
                     return ir;
                 }

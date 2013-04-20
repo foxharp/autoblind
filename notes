@@ -18,57 +18,74 @@ pin restrictions:
     that leaves PB3, PB4, PB5, PA0, PA1, PA3 - PA7
 
 pin choices:
-    MOTOR_ON	PA0
-    MOTOR_DIR	PA1
+    MOTOR_ON    PA0
+    MOTOR_DIR   PA1
     MOTOR_TURN  PA2
 
-    LIMIT	PA3
+    LIMIT       PA3
 
-    IR_IN	PA4
+    IR_IN       PA4
 
-    PDEBUG	PB2
+    PDEBUG      PB2
 
-    SUART_RX	PB6
-    SUART_TX	PB1
+    SUART_RX    PB6
+    SUART_TX    PB1
 
-    TONE	PA5 and PA6
+    TONE        PA5 and PA6
 
-(LED end of board, from top)
 
-    6-pin connector to motor  (unordered)
-	GND
-	MOTOR_DIR	PA1
-	MOTOR_ON	PA0
-	nc
-	MOTOR_TURN	PA2
-	+5 
+connector pinouts:
 
-    2-pin connector to limit switch  (unordered)
-	LIMIT		PA3
-	GND
+  LED end of board, from top
 
-    4-pin connector to IR sensor  (unordered)
-	GND
-	BUTTON		PB2	(parallel with on-board button)
-	IR		PA4
-	+5
+                                    cable color
+                                    ----------
+    6-pin, to motor
+        GND                         black
+        MOTOR_DIR       PA1         green
+        MOTOR_ON        PA0         blue
+        nc
+        MOTOR_TURN      PA2         brown
+        +5                          red
 
-(USB end of board)
+    2-pin, to limit switch
+        LIMIT           PA3         yellow
+        GND                         black
+
+    4-pin, to IR sensor
+        GND                         black
+        BUTTON          PB2         yellow
+        IR              PA4         green
+        +5                          red
+
+  USB end of board
+
+
+motor pinouts:
+
+    remove existing wires from G, Y, R, and B.
+    wire with:
+        G -- green
+        Y -- blue
+        R -- brown
+        B -- black
+             red -- goes to pad of existing red wire (of shielded
+                    that goes to pulse sensor)
 
 
 -------------switches---------
 
-cscott's choice:  FSM6JH - TE Connectivity	450-1652-ND	
-longer post:	FSM11JH - TE Connectivity	450-1753-ND
+cscott's choice:  FSM6JH - TE Connectivity      450-1652-ND     
+longer post:    FSM11JH - TE Connectivity       450-1753-ND
 
 
 ---------wiring--------
 
-	across  up   across
-switch:   18" + 26" + 18"	    62"
+        across  up   across
+switch:   18" + 26" + 18"           62"
 
-	across  up   further up
-sensor:	    18" + 26" + 36"	    80"
+        across  up   further up
+sensor:     18" + 26" + 36"         80"
 
 ---------- extended commands for one-button ---
 
@@ -165,3 +182,10 @@ grep -v 'D _edata' myprog.map  | grep ' [dD] '
 which basically checks for named objects in the data section.
 
 comments welcome.
+
+
+
+
+-------------
+
+// vile:noti:sw=4

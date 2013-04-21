@@ -136,31 +136,48 @@ void monitor(void)
     case '\0':
         break;
 
+    case 'b': // blind debug
+        blind_state_debug = n;
+        blind_motor_debug = gethex();
+        break;
+
     case 'u': // up
-        do_blind_cmd(BL_GO_UP);
+        do_blind_cmd(BL_GO_TOP);
+        break;
+    case 'm': // middle
+        do_blind_cmd(BL_GO_MIDDLE);
         break;
     case 'd': // down
-        do_blind_cmd(BL_GO_DOWN);
+        do_blind_cmd(BL_GO_BOTTOM);
         break;
     case 's': // stop
         do_blind_cmd(BL_STOP);
         break;
+
     case 'o': // one button control
         do_blind_cmd(BL_ONE_BUTTON);
         break;
+
     case 'f': // force up
         do_blind_cmd(BL_FORCE_UP);
         break;
     case 'F': // force down
         do_blind_cmd(BL_FORCE_DOWN);
         break;
-    case 'm':
-        blind_set_position(n);
+
+    case 'U':
         do_blind_cmd(BL_SET_TOP);
         break;
     case 'M':
-        blind_set_position(n);
+        do_blind_cmd(BL_SET_MIDDLE);
+        break;
+    case 'D':
         do_blind_cmd(BL_SET_BOTTOM);
+        break;
+
+    case 'I':
+        // invert sense of direction
+        do_blind_cmd(BL_INVERT);
         break;
 
     case 'B':
@@ -250,7 +267,7 @@ void monitor(void)
             putstr(QUICKFOX);
         break;
 
-    case 'U':
+    case 'Q':
         // print repeating 'U', which is a square wave on the transmit line
         for (i = 0; i < (80 * 20); i++)
             putch('U');

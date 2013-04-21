@@ -4,19 +4,22 @@
  * Licensed under GPL version 2, see accompanying LICENSE file
  * for details.
  */
+extern char blind_state_debug;
+extern char blind_motor_debug;
 
 void blind_init(void);
 void blind_process(void);
 void blind_save_config(void);
 void blind_read_config(void);
-void blind_set_position(int n);
 char blind_at_limit(void);
 
 enum {
     BL_STOP = 1,
-    BL_GO_UP,
-    BL_GO_DOWN,
+    BL_GO_TOP,
+    BL_GO_MIDDLE,
+    BL_GO_BOTTOM,
     BL_SET_TOP,
+    BL_SET_MIDDLE,
     BL_SET_BOTTOM,
     BL_FORCE_UP,
     BL_FORCE_DOWN,

@@ -84,7 +84,7 @@ void button_process(void)
         // check for a long press first
         if (check_timer(button_timer, 1000)) {
             putstr("long button\n");
-            // do nothing yet
+            do_blind_cmd(BL_GO_BOTTOM);
             break;
         }
 

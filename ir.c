@@ -33,6 +33,7 @@
 #include <avr/wdt.h>
 #include "common.h"
 #include "timer.h"
+#include "ir.h"
 #include "util.h"
 
 #define PULSE_DEBUG 1
@@ -235,32 +236,35 @@ ir_process(void)
 }
 
 #define Nbut 4
-long ir_remote_codes[] PROGMEM = {
+struct irc {
+    long ir_code;
+    char ir_cmd;
+} ir_remote_codes [] PROGMEM = {
     // pgf's X-10 "tv buddy" remote (as currently programed)
-    0xe0e048b7,     // up (P+)          [IR_UP   ]
-    0xe0e008f7,     // down (P-)        [IR_DOWN ]
-    0xe0e0f00f,     // center (mute)    [IR_STOP ]
-    0xe0e040bf,     // power            [IR_ALT  ]
-    // 0xe0e0d02f,     // left (V-)
-    // 0xe0e0e01f,     // right (V+)
+    { 0xe0e048b7, IR_TOP },        // up (P+)
+    { 0xe0e0d02f, IR_MIDDLE },     // left (V-)
+    { 0xe0e0e01f, IR_MIDDLE },     // right (V+)
+    { 0xe0e008f7, IR_BOTTOM },     // down (P-)
+    { 0xe0e0f00f, IR_STOP },       // center (mute)
+    { 0xe0e040bf, IR_ALT },        // power
 
     // samsung tv remote
-    0xe0e006f9 ,     // up               [IR_UP   ]
-    0xe0e08679 ,     // down             [IR_DOWN ]
-    0xe0e016e9 ,     // enter            [IR_STOP ]
-    0xe0e0b44b ,     // exit             [IR_ALT  ]
-    // 0xe0e0a659 ,     // left
-    // 0xe0e046b9 ,     // right
+    { 0xe0e006f9, IR_TOP },        // up
+    { 0xe0e0a659, IR_MIDDLE },     // left
+    { 0xe0e046b9, IR_MIDDLE },     // right
+    { 0xe0e08679, IR_BOTTOM },     // down
+    { 0xe0e016e9, IR_STOP },       // enter
+    { 0xe0e0b44b, IR_ALT },        // exit
 
     // sony video8
-    0xd9c,           // rew              [IR_UP   ]
-    0x19c,           // stop             [IR_DOWN ]
-    0x59c,           // play             [IR_STOP ]
-    0x5bc,           // data             [IR_ALT  ]
-    // 0x39c,           // ff
-    // 0x99c,           // pause
-    // 0xc5c,           // slow
-    0
+    { 0x5bc, IR_ALT },             // data
+    { 0xd9c, IR_TOP },             // rew
+    { 0x39c, IR_TOP },             // ff
+    { 0x19c, IR_STOP },            // stop
+    { 0x59c, IR_MIDDLE },          // play
+    { 0x99c, IR_BOTTOM },          // pause
+    { 0xc5c, IR_BOTTOM },          // slow
+    { 0, 0}
 
 };
 
@@ -276,9 +280,9 @@ long ir_remote_codes[] PROGMEM = {
  */
 char get_ir(void)
 {
-    long *ircp;
-    long irc;
-    int ir;
+    struct irc *ircp;
+    long ircode;
+    int ircmd;
 
     while (1) {
         if (ir_code_avail) {
@@ -299,16 +303,16 @@ char get_ir(void)
 
             // loop through the table, and return the index on a match.
             while(1) {
-                irc = pgm_read_dword(ircp);
-                if (!irc) {
-                    p_hex32(ir_code); crnl();
+                ircode = pgm_read_dword(&ircp->ir_code);
+                if (!ircode) {
+                    p_hex32(ircode); crnl();
                     return -1;
                 }
 
-                if (ir_code == irc) {
-                    ir = (ircp - ir_remote_codes) % Nbut;
-                    p_hex(ir); crnl();
-                    return ir;
+                if (ir_code == ircode) {
+                    ircmd = pgm_read_byte(&ircp->ir_cmd);
+                    p_hex(ircmd); crnl();
+                    return ircmd;
                 }
 
                 ircp++;

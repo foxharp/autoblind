@@ -28,8 +28,6 @@
  *   to actually do anything.
  */
 
-#define STATE_DEBUG 0
-#define MOTOR_DEBUG 0
 
 #define PORTMOTOR PORTA
 #define PINMOTOR PINA
@@ -39,6 +37,7 @@
 #define P_MOTOR_TURN    PA2
 #define P_LIMIT         PA3
 
+#define MAXPOS 32000
 
 /*
  * for the motor state machine, we set motor_next to the state we
@@ -51,10 +50,13 @@ enum {
     MOTOR_BRAKING,
     MOTOR_UP,
     MOTOR_DOWN,
-    MOTOR_REVERSE,
+    // MOTOR_REVERSE,
 };
 static char motor_cur, motor_next;
 static long motor_state_timer;
+
+char blind_state_debug;
+char blind_motor_debug;
 
 /*
  * the blind state machine is a little different.  "blind_do" can
@@ -64,8 +66,9 @@ static long motor_state_timer;
  */
 enum {
     BLIND_STOP = 0,
-    BLIND_UP,
-    BLIND_DOWN,
+    BLIND_TOP,
+    BLIND_MIDDLE,
+    BLIND_BOTTOM,
     BLIND_FORCE_UP,
     BLIND_FORCE_DOWN,
     BLIND_TOGGLE,
@@ -77,8 +80,6 @@ enum {
     BLIND_IS_STOPPED = 0,
     BLIND_IS_RISING,
     BLIND_IS_FALLING,
-    BLIND_IS_AT_TOP_STOP,
-    BLIND_IS_AT_BOTTOM_STOP,
     BLIND_IS_AT_LIMIT,
 };
 static char blind_is;
@@ -104,6 +105,7 @@ static char position_changed;
 // program is written anyway, so it doesn't matter much.
 struct blind_config {
     int top_stop;
+    int middle_stop;
     int bottom_stop;
     int position;
     int up_dir;
@@ -131,7 +133,7 @@ char do_blind_report;
 /* I/O -- read the limit switch, control the motors */
 static void set_motion(int on)
 {
-    if (MOTOR_DEBUG) {
+    if (blind_motor_debug) {
         static int last_on;
         if (on != last_on) {
             p_hex(on);
@@ -154,7 +156,7 @@ static char get_motion(void)
 
 static void set_direction(int dir)
 {
-    if (MOTOR_DEBUG) {
+    if (blind_motor_debug) {
         static int last_dir;
         if (dir != last_dir) {
             p_hex(dir);
@@ -183,27 +185,30 @@ char blind_at_limit(void)
 
 
 /* non-volatile memory -- read and save eeprom */
+void dump_config(void)
+{
+    int i, *ip;
+    ip = (int *)blc;
+    crnl();
+    for (i = 0; i < sizeof(*blc)/sizeof(int); i++) {
+        p_hex(i); p_hex(ip[i]); crnl();
+    }
+}
 
 void blind_read_config(void)
 {
-    int i;
 
     eeprom_read_block(blc, 0, sizeof(*blc));
 
-    if (1) {
-        int *ip;
-        ip = (int *)blc;
-        crnl();
-        for (i = 0; i < sizeof(*blc)/sizeof(int); i++) {
-            p_hex(i); p_hex(ip[i]); crnl();
-        }
-    }
+    dump_config();
 
     // set sensible defaults
     if (blc->top_stop == 0xffff)
         blc->top_stop = NOMINAL_PEAK;
+    if (blc->middle_stop == 0xffff)
+        blc->middle_stop = -MAXPOS;
     if (blc->bottom_stop == 0xffff)
-        blc->bottom_stop = -10000;
+        blc->bottom_stop = -MAXPOS;
     if (blc->position == 0xffff)
         blc->position = 10;
     if (blc->up_dir == 0xffff)
@@ -254,7 +259,8 @@ static int get_position(void)
     return p;
 }
 
-void blind_set_position(int p) // mainly for debug, for use from monitor
+#if NEEDED
+static void blind_set_position(int p) // mainly for debug, for use from monitor
 {
     cli();
     blc->position = p;
@@ -267,6 +273,7 @@ static void zero_position(void)
     blc->position = 0;
     sei();
 }
+#endif
 
 ISR(INT1_vect)          // rotation pulse
 {
@@ -309,9 +316,9 @@ static void start_moving_down(void)
 static void blind_state(void)
 {
     static char recent_motion;
-    char next_do = BLIND_NOP;
-
-    if (STATE_DEBUG) {
+    int pos;
+    
+    if (blind_state_debug) {
         static char last_blind_is, last_blind_do;
         if (blind_is != last_blind_is) {
             p_hex(blind_is);
@@ -323,15 +330,50 @@ static void blind_state(void)
         }
     }
 
-    // make sure this is always honored, and immediately
-    if (blind_do == BLIND_STOP) {
-        if (get_motion()) {
+    pos = get_position();
+
+    if (blind_do == BLIND_TOGGLE) {
+        if (blind_is != BLIND_IS_STOPPED) {
+            blind_do = BLIND_STOP;
+        } else if (recent_motion == BLIND_IS_RISING) {
+            blind_do = BLIND_MIDDLE;
+        } else {
+            blind_do = BLIND_TOP;
+        }
+    }
+
+    if (blind_do != BLIND_NOP) {
+        // make sure this is always honored, and immediately
+        if (blind_do == BLIND_STOP) {
             stop_moving();
             blind_is = BLIND_IS_STOPPED;
+            blind_do = BLIND_NOP;
+            return;
+        } else if (blind_do == BLIND_TOP) {
+            goal = blc->top_stop;
+        } else if (blind_do == BLIND_MIDDLE) {
+            goal = blc->middle_stop;
+        } else if (blind_do == BLIND_BOTTOM) {
+            goal = blc->bottom_stop;
+        } else if (blind_do == BLIND_FORCE_UP) {
+            goal = get_position() + inch_to_pulse(18);
+        } else if (blind_do == BLIND_FORCE_DOWN) {
+            goal = get_position() - inch_to_pulse(18);
+        }
+
+        if (pos < goal) {
+            blind_is = BLIND_IS_RISING;
+            start_moving_up();
+        } else if (pos > goal) {
+            blind_is = BLIND_IS_FALLING;
+            start_moving_down();
+        } else {
+            blind_is = BLIND_IS_STOPPED;
+            stop_moving();
         }
         blind_do = BLIND_NOP;
-        return;
     }
+
 
     if (motor_next != motor_cur) { // no changes while the motor is settling
         return;
@@ -339,105 +381,27 @@ static void blind_state(void)
 
     switch (blind_is) {
     case BLIND_IS_STOPPED:
-        if (get_motion()) {
+        if (get_motion()) {  // just in case
             putstr("failsafe STOP\n");
             set_motion(0);
         }
-        if (blind_do == BLIND_UP) {
-            start_moving_up();
-            blind_is = BLIND_IS_RISING;
-            goal = blc->top_stop;
-        } else if (blind_do == BLIND_DOWN) {
-            start_moving_down();
-            blind_is = BLIND_IS_FALLING;
-            goal = blc->bottom_stop;
-        } else if (blind_do == BLIND_TOGGLE) {
-            if (recent_motion == BLIND_IS_RISING) {
-                next_do = BLIND_DOWN;
-            } else {
-                next_do = BLIND_UP;
-            }
-        }
         break;
-
     case BLIND_IS_FALLING:
         recent_motion = blind_is;
-        if (blind_at_limit()) {
+        if (pos <= goal) {
             stop_moving();
-            zero_position();
-            blind_is = BLIND_IS_AT_LIMIT;
-        } else if (blind_do == BLIND_UP) {
-            start_moving_up();
-            blind_is = BLIND_IS_RISING;
-            goal = blc->top_stop;
-        } else if (get_position() == goal) {
-            stop_moving();
-            blind_is = BLIND_IS_AT_BOTTOM_STOP;
-        } else if (blind_do == BLIND_TOGGLE) {
-            next_do = BLIND_STOP;
+            blind_is = BLIND_IS_STOPPED;
         }
         break;
-
-    case BLIND_IS_AT_LIMIT:
-        if (blind_do == BLIND_UP ||
-                blind_do == BLIND_TOGGLE) {
-            start_moving_up();
-            blind_is = BLIND_IS_RISING;
-            ignore_limit = inch_to_pulse(2);
-            goal = blc->top_stop;
-        }
-        break;
-
     case BLIND_IS_RISING:
         recent_motion = blind_is;
-        if (blind_at_limit() && !ignore_limit) {
-            putstr("hit LIMIT\n");
+        if (pos >= goal) {
             stop_moving();
-            zero_position();
-            blind_is = BLIND_IS_AT_LIMIT;
-            // we hit the limit going the wrong direction 
-            blc->up_dir = !blc->up_dir;
-            blind_save_config();
-        } else if (blind_do == BLIND_DOWN) {
-            start_moving_down();
-            blind_is = BLIND_IS_FALLING;
-            goal = blc->bottom_stop;
-        } else if (get_position() == goal) {
-            stop_moving();
-            blind_is = BLIND_IS_AT_TOP_STOP;
-        } else if (blind_do == BLIND_TOGGLE) {
-            next_do = BLIND_STOP;
-        }
-        break;
-
-    case BLIND_IS_AT_TOP_STOP:
-        if (blind_do == BLIND_DOWN ||
-                blind_do == BLIND_TOGGLE) {
-            start_moving_down();
-            blind_is = BLIND_IS_FALLING;
-            goal = blc->bottom_stop;
-        } else if (blind_do == BLIND_FORCE_UP) {
-            start_moving_up();
-            blind_is = BLIND_IS_RISING;
-            goal = get_position() + inch_to_pulse(8);
-        }
-        break;
-
-    case BLIND_IS_AT_BOTTOM_STOP:
-        if (blind_do == BLIND_UP ||
-                blind_do == BLIND_TOGGLE) {
-            start_moving_up();
-            blind_is = BLIND_IS_RISING;
-            goal = blc->top_stop;
-        } else if (blind_do == BLIND_FORCE_DOWN) {
-            start_moving_down();
-            blind_is = BLIND_IS_FALLING;
-            goal = get_position() - inch_to_pulse(18);
+            blind_is = BLIND_IS_STOPPED;
         }
         break;
     }
 
-    blind_do = next_do;
 }
 
 
@@ -447,7 +411,7 @@ static void blind_state(void)
 static void motor_state(void)
 {
 
-    if (STATE_DEBUG)
+    if (blind_state_debug)
     {
         static char last_motor_cur, last_motor_next;
         if (motor_cur != last_motor_cur) {
@@ -457,14 +421,6 @@ static void motor_state(void)
         if (motor_next != last_motor_next) {
             p_hex(motor_next);
             last_motor_next = motor_next;
-        }
-    }
-
-    if (motor_next == MOTOR_REVERSE) {
-        switch (motor_cur) {
-        case MOTOR_DOWN:    motor_next = MOTOR_UP;  break;
-        case MOTOR_UP:      motor_next = MOTOR_DOWN;  break;
-        case MOTOR_STOPPED: motor_next = MOTOR_STOPPED; break;
         }
     }
 
@@ -555,35 +511,49 @@ static void blind_ir(void)
         return;
 
     switch (cmd) {
-    case IR_UP:
+    case IR_TOP:
             if (alt) {
-                if (alt == 1)       // alt up
+                if (alt == 1) {      // alt top
                     do_blind_cmd(BL_FORCE_UP);
-                else if (alt == 2)  // alt alt up
+                } else if (alt == 2) { // alt alt top
                     do_blind_cmd(BL_SET_TOP);
-                else {
+                } else {
                     tone_start(TONE_ABORT);
                     break;
                 }
                 tone_start(TONE_CONFIRM);
             } else {
-                do_blind_cmd(BL_GO_UP);
+                do_blind_cmd(BL_GO_TOP);
             }
             break;
 
-    case IR_DOWN:
+    case IR_MIDDLE:
             if (alt) {
-                if (alt == 1)       // alt down
-                    do_blind_cmd(BL_FORCE_DOWN);
-                else if (alt == 2)  // alt alt down
-                    do_blind_cmd(BL_SET_BOTTOM);
-                else {
+                if (alt == 2) { // alt alt bottom
+                    do_blind_cmd(BL_SET_MIDDLE);
+                } else {
                     tone_start(TONE_ABORT);
                     break;
                 }
                 tone_start(TONE_CONFIRM);
             } else {
-                do_blind_cmd(BL_GO_DOWN);
+                do_blind_cmd(BL_GO_MIDDLE);
+            }
+            break;
+
+    case IR_BOTTOM:
+            if (alt) {
+                if (alt == 1) {      // alt bottom
+                    do_blind_cmd(BL_FORCE_DOWN);
+                } else if (alt == 2) { // alt alt bottom
+                    do_blind_cmd(BL_SET_BOTTOM);
+                } else {
+                    tone_start(TONE_ABORT);
+                    break;
+                }
+                tone_start(TONE_CONFIRM);
+            } else {
+                do_blind_cmd(BL_GO_BOTTOM);
             }
             break;
 
@@ -625,14 +595,74 @@ static char blind_get_cmd(void)
     return cmd;
 }
 
+// interpret external commands.  do some here, pass some
+// on to the state machine.
+void blind_commands(void)
+{
+    char cmd;
+
+    cmd = blind_get_cmd();
+    if (!cmd)
+        return;
+
+    switch (cmd) {
+    case BL_STOP:
+        blind_do = BLIND_STOP;
+        break;
+
+    case BL_GO_TOP:
+        blind_do = BLIND_TOP;
+        break;
+
+    case BL_GO_MIDDLE:
+        blind_do = BLIND_MIDDLE;
+        break;
+
+    case BL_GO_BOTTOM:
+        blind_do = BLIND_BOTTOM;
+        break;
+
+    case BL_SET_TOP:
+        blc->top_stop = get_position();
+        p_hex(blc->top_stop);
+        blind_save_config();
+        break;
+
+    case BL_SET_MIDDLE:
+        blc->middle_stop = get_position();
+        p_hex(blc->middle_stop);
+        blind_save_config();
+        break;
+
+    case BL_SET_BOTTOM:
+        blc->bottom_stop = get_position();
+        p_hex(blc->bottom_stop);
+        blind_save_config();
+        break;
+
+    case BL_FORCE_UP:
+        blind_do = BLIND_FORCE_UP;
+        break;
+
+    case BL_FORCE_DOWN:
+        blind_do = BLIND_FORCE_DOWN;
+        break;
+
+    case BL_ONE_BUTTON:
+        blind_do = BLIND_TOGGLE;
+        break;
+
+    case BL_INVERT:
+        blc->up_dir = !blc->up_dir;
+        blind_save_config();
+        break;
+    }
+}
 /*
  * get commands and drive the blind and motor state machine
  */
 void blind_process(void)
 {
-
-    char cmd;
-
     // save current position 30 seconds after it stops changing
     if (position_changed &&
             check_timer(position_change_timer, 30*1000)) {
@@ -658,49 +688,8 @@ void blind_process(void)
 
     blind_state();
 
-    cmd = blind_get_cmd();
-    if (!cmd)
-        return;
+    blind_commands();
 
-    switch (cmd) {
-    case BL_STOP:
-        blind_do = BLIND_STOP;
-        break;
-
-    case BL_GO_UP:
-        blind_do = BLIND_UP;
-        break;
-
-    case BL_GO_DOWN:
-        blind_do = BLIND_DOWN;
-        break;
-
-    case BL_SET_TOP:
-        blc->top_stop = get_position();
-        blind_save_config();
-        break;
-
-    case BL_SET_BOTTOM:
-        blc->bottom_stop = get_position();
-        blind_save_config();
-        break;
-
-    case BL_FORCE_UP:
-        blind_do = BLIND_FORCE_UP;
-        break;
-
-    case BL_FORCE_DOWN:
-        blind_do = BLIND_FORCE_DOWN;
-        break;
-
-    case BL_ONE_BUTTON:
-        blind_do = BLIND_TOGGLE;
-        break;
-    case BL_INVERT:
-        blc->up_dir = !blc->up_dir;
-        blind_save_config();
-        break;
-    }
 }
 
 // vile:noti:sw=4

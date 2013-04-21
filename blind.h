@@ -21,6 +21,7 @@ enum {
     BL_FORCE_UP,
     BL_FORCE_DOWN,
     BL_ONE_BUTTON,
+    BL_INVERT,
 };
 
 extern char blind_cmd;

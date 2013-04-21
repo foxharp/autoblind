@@ -268,6 +268,11 @@ long ir_remote_codes[] PROGMEM = {
  * wait for an IR press, and return an index into the table above.
  * this really blocks, so ir_avail() should be called first if that's
  * not desireable.
+ *
+ * may return -1 if:
+ *  - the received code isn't recognized (isn't in table, above)
+ *  - the received code matches the previous, and not enough time
+ *    has passed.
  */
 char get_ir(void)
 {

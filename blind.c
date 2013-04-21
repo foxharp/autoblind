@@ -542,18 +542,29 @@ static void blind_ir(void)
     static long alt_timer;
     static char alt;
 
+    if (alt && check_timer(alt_timer, 1000)) {
+        tone_start(TONE_ABORT);
+        alt = 0;
+    }
+
     if (!ir_avail())
         return;
 
     cmd = get_ir();
+    if (cmd == -1)
+        return;
 
     switch (cmd) {
     case IR_UP:
-            if (alt && !check_timer(alt_timer, 1000)) {
-                if (alt == 1)
+            if (alt) {
+                if (alt == 1)       // alt up
                     do_blind_cmd(BL_FORCE_UP);
-                else
+                else if (alt == 2)  // alt alt up
                     do_blind_cmd(BL_SET_TOP);
+                else {
+                    tone_start(TONE_ABORT);
+                    break;
+                }
                 tone_start(TONE_CONFIRM);
             } else {
                 do_blind_cmd(BL_GO_UP);
@@ -561,11 +572,15 @@ static void blind_ir(void)
             break;
 
     case IR_DOWN:
-            if (alt && !check_timer(alt_timer, 1000)) {
-                if (alt == 1)
+            if (alt) {
+                if (alt == 1)       // alt down
                     do_blind_cmd(BL_FORCE_DOWN);
-                else
+                else if (alt == 2)  // alt alt down
                     do_blind_cmd(BL_SET_BOTTOM);
+                else {
+                    tone_start(TONE_ABORT);
+                    break;
+                }
                 tone_start(TONE_CONFIRM);
             } else {
                 do_blind_cmd(BL_GO_DOWN);
@@ -573,21 +588,27 @@ static void blind_ir(void)
             break;
 
     case IR_STOP:
-            do_blind_cmd(BL_STOP);
+            if (alt) {
+                if (alt == 3) {     // alt alt alt stop
+                    do_blind_cmd(BL_INVERT);
+                    tone_start(TONE_CONFIRM);
+                } else {
+                    tone_start(TONE_ABORT);
+                    break;
+                }
+
+            } else {
+                do_blind_cmd(BL_STOP);
+            }
             break;
 
     case IR_ALT:
-            if (alt && !check_timer(alt_timer, 1000)) {
-                alt++;
-            } else {
-                alt = 1;
-            }
-
+            alt++;
             tone_start(TONE_CHIRP);
             alt_timer = get_ms_timer();
             return;
     }
-    alt_timer = 0;
+
     alt = 0;
 }
 
@@ -674,6 +695,10 @@ void blind_process(void)
 
     case BL_ONE_BUTTON:
         blind_do = BLIND_TOGGLE;
+        break;
+    case BL_INVERT:
+        blc->up_dir = !blc->up_dir;
+        blind_save_config();
         break;
     }
 }

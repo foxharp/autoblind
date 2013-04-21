@@ -56,8 +56,9 @@ void tone_start(char hilo, int duration);
 // this is a little ugly, but a tone is described by both its
 // nature and its length, so we put both tone_start() parameters in
 // one #define.
-#define TONE_CHIRP 1,100
-#define TONE_CONFIRM 3,300
+#define TONE_CHIRP 1,75        // high, short
+#define TONE_CONFIRM 1,200      // high, longer
+#define TONE_ABORT 9,300        // low, even longer
 
 void util_init(void);
 

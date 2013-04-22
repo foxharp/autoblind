@@ -315,7 +315,7 @@ static void start_moving_down(void)
  */
 static void blind_state(void)
 {
-    static char recent_motion;
+    static char recent_goal;
     int pos;
     
     if (blind_state_debug) {
@@ -335,10 +335,10 @@ static void blind_state(void)
     if (blind_do == BLIND_TOGGLE) {
         if (blind_is != BLIND_IS_STOPPED) {
             blind_do = BLIND_STOP;
-        } else if (recent_motion == BLIND_IS_RISING) {
-            blind_do = BLIND_MIDDLE;
-        } else {
+        } else if (recent_goal == BLIND_MIDDLE) {
             blind_do = BLIND_TOP;
+        } else {
+            blind_do = BLIND_MIDDLE;
         }
     }
 
@@ -350,10 +350,13 @@ static void blind_state(void)
             blind_do = BLIND_NOP;
             return;
         } else if (blind_do == BLIND_TOP) {
+            recent_goal = BLIND_TOP;
             goal = blc->top_stop;
         } else if (blind_do == BLIND_MIDDLE) {
+            recent_goal = BLIND_MIDDLE;
             goal = blc->middle_stop;
         } else if (blind_do == BLIND_BOTTOM) {
+            recent_goal = BLIND_BOTTOM;
             goal = blc->bottom_stop;
         } else if (blind_do == BLIND_FORCE_UP) {
             goal = get_position() + inch_to_pulse(18);
@@ -387,14 +390,12 @@ static void blind_state(void)
         }
         break;
     case BLIND_IS_FALLING:
-        recent_motion = blind_is;
         if (pos <= goal) {
             stop_moving();
             blind_is = BLIND_IS_STOPPED;
         }
         break;
     case BLIND_IS_RISING:
-        recent_motion = blind_is;
         if (pos >= goal) {
             stop_moving();
             blind_is = BLIND_IS_STOPPED;

@@ -59,18 +59,18 @@
 volatile word capture_len;
 volatile byte capture_is_low;
 volatile byte capture_overflow;
-volatile byte max_pulses;
-volatile byte use_low;
 
-#define MAX_PULSES 32
+#define MAX_PULSES 48
 byte ir_i;
 long ir_accum, ir_code;
 char ir_code_avail;
 
-#if PULSE_DEBUG
-word ir_pulse[MAX_PULSES];
+#ifdef PULSE_DEBUG
+struct pulsepair {
+    unsigned int lowlen;
+    unsigned int highlen;
+} ir_header, ir_times[MAX_PULSES];
 #endif
-
 
 #define usec_per_tick 1
 
@@ -139,19 +139,18 @@ ISR(TIMER0_CAPT_vect, ISR_NOBLOCK)
 
 }
 
-
 void
 ir_process(void)
 {
     word len = 0;
-    static word lastlen;
+    static word lowlen;
     byte low;
     byte overflow;
 
     /* the "input capture" interrupt handler will record the
      * most recent pulse's length and polarity.
      */
-    while (capture_len) {
+    while (capture_len || capture_overflow) {
 
         cli();
         // capture length, polarity, and overflow data with interrupts off
@@ -174,68 +173,92 @@ ir_process(void)
         // current capture_len is meaningless -- it's just a
         // gap, or the last remnant of a gap.
         if (overflow || len > 10000) {
-            ir_i = 0;
-            ir_accum = 0;
-            lastlen = 0;
-            continue;
-        }
-
-#define near(val, ref) ((ref + ref/6) > val && val > (ref - ref/6))
-
-        if ( !low &&
-            ((near(lastlen, 4850) && near(len, 4550)) ||  // samsung
-             (near(lastlen, 2650) && near(len, 500))) )  // sony)
-        {
-            // putch('H');
-            if (1000 > len) {
-                use_low = 1;
-                max_pulses = 12;
-            } else {
-                use_low = 0;
-                max_pulses = 32;
+            if (ir_i > 3) {
+                ir_code = ir_accum;
+                ir_code_avail = 1;
             }
             ir_i = 0;
             ir_accum = 0;
-            lastlen = 0;
-            continue;
-        }
-        lastlen = len;
-
-        if (use_low ^ low) {
-            // i don't care about half the pulses.  for my chosen
-            // remotes, there's no information in them -- either
-            // the low pulses or high pulses are just spacers.
+            lowlen = 0;
+            // overflow ? putch('v'):putch('o');
+            overflow = 0;
             continue;
         }
 
-        if (ir_i >= max_pulses) { // we've gotten too many bits
+
+        if ( !low &&
+#if BEFORE
+#define near(val, ref) ((ref + ref/6) > val && val > (ref - ref/6))
+            /* remotes emit different header pairs... */
+            ((near(lowlen, 4850) && near(len, 4550)) ||  // samsung
+             (near(lowlen, 2650) && near(len, 500))  ||  // sony
+             (near(lowlen, 3750) && near(len, 1670)) ||  // panasonic
+             (near(lowlen, 9065) && near(len, 4500)))    // packard bell
+#else
+            /* ... but they have a lot in common */
+            (len > 2000 || lowlen > 2000)
+#endif
+            )
+        {
+            ir_i = 0;
+#ifdef PULSE_DEBUG
+            ir_header.lowlen = lowlen;
+            ir_header.highlen = len;
+#endif
+            ir_accum = 0;
+            lowlen = 0;
+            continue;
+        }
+
+        if (low) {
+            /* we don't bother recording low pulses.  just keep
+             * track of how long they were. */
+            lowlen = len;
+            continue;
+        }
+
+        // if a remote puts out lots of bits (e.g., panasonic),
+        // we'll only save the last 32 of them.  by setting
+        // MAX_PULSES on the high side (i.e., 48, rather than
+        // just 32), we're hoping that leading bits are likely a
+        // fixed prefix that we can discard without losing
+        // uniqueness.
+        if (ir_i >= MAX_PULSES) { // we've gotten too many bits
+            lowlen = len;
             continue;
         }
 
         // make way for a new bit
         ir_accum <<= 1;
 
-        // zero bits are short, one bits are long
-        if (len > 1000)  { // longer than 1 millisecond?
-            // putch('1');
+        // zeros and ones may be short or long.  we don't really
+        // care.  what's important is that in all remotes i've
+        // looked at, either the low pulse is always short, or
+        // the high pulse is always short -- whichever it is, the
+        // bit is descriminated by the other one being longer
+        // than a millisecond. */
+        if (len > 1000 || lowlen > 1000)  {
             ir_accum |= 1;
-        } else {
-            // putch('0');
         }
 
-#if PULSE_DEBUG
-        ir_pulse[ir_i] = len;
+#ifdef PULSE_DEBUG
+        ir_times[ir_i].lowlen = lowlen;
+        ir_times[ir_i].highlen = len;
 #endif
 
+        lowlen = 0;
+
         // if we've accumulated a full complement of bits, save it off
-        if (++ir_i >= max_pulses) {
+        if (++ir_i >= MAX_PULSES) {
             ir_code = ir_accum;
             ir_code_avail = 1;
         }
     }
 }
 
-#define Nbut 4
+/* to add a remote, press the keys you've chosen for all of
+ * up/down/middle/stop/alt and copy/paste them to this table.
+ */
 struct irc {
     long ir_code;
     char ir_cmd;
@@ -256,16 +279,32 @@ struct irc {
     { 0xe0e016e9, IR_STOP },       // enter
     { 0xe0e0b44b, IR_ALT },        // exit
 
-    // sony video8
-    { 0x5bc, IR_ALT },             // data
-    { 0xd9c, IR_TOP },             // rew
-    { 0x39c, IR_TOP },             // ff
-    { 0x19c, IR_STOP },            // stop
-    { 0x59c, IR_MIDDLE },          // play
-    { 0x99c, IR_BOTTOM },          // pause
-    { 0xc5c, IR_BOTTOM },          // slow
-    { 0, 0}
+    // ancient packard bell 
+    { 0x08f7906f, IR_TOP },        // up     
+    { 0x08f710ef, IR_MIDDLE },     // left   
+    { 0x08f7d02f, IR_MIDDLE },     // right  
+    { 0x08f750af, IR_BOTTOM },     // down   
+    { 0x08f7708f, IR_STOP },       // enter  
+    { 0x08f7e21d, IR_ALT },        // aux3   
 
+    // sony video8
+    { 0x2de, IR_ALT },             // data
+    { 0x6ce, IR_TOP },             // rew
+    { 0x1ce, IR_TOP },             // ff
+    { 0x2ce, IR_MIDDLE },          // play
+    { 0x0ce, IR_STOP },            // stop
+    { 0x4ce, IR_BOTTOM },          // pause
+    { 0x62e, IR_BOTTOM },          // slow
+
+    // panasonic dvd
+    { 0x0d00a1ac, IR_TOP },        // up     
+    { 0x0d00e1ec, IR_MIDDLE },     // left   
+    { 0x0d00111c, IR_MIDDLE },     // right  
+    { 0x0d00616c, IR_BOTTOM },     // down   
+    { 0x0d00414c, IR_STOP },       // enter  
+    { 0x0d00010c, IR_ALT },        // menu   
+
+    { 0, 0}
 };
 
 /*
@@ -305,12 +344,13 @@ char get_ir(void)
             while(1) {
                 ircode = pgm_read_dword(&ircp->ir_code);
                 if (!ircode) {
-                    p_hex32(ircode); crnl();
+                    p_hex32(ir_code); crnl();
                     return -1;
                 }
 
                 if (ir_code == ircode) {
                     ircmd = pgm_read_byte(&ircp->ir_cmd);
+                    p_hex32(ir_code); 
                     p_hex(ircmd); crnl();
                     return ircmd;
                 }
@@ -326,10 +366,18 @@ void ir_show_code(void)
 {
 #if PULSE_DEBUG
     byte i;
+
+    putstr("head:\t");
+    putdec16(ir_header.lowlen);
+    putch('\t');
+    putdec16(ir_header.highlen);
+    crnl();
     for (i = 0; i < MAX_PULSES; i++) {
         puthex(i);
-        putstr("\t");
-        putdec16(ir_pulse[i]);
+        putch('\t');
+        putdec16(ir_times[i].lowlen);
+        putch('\t');
+        putdec16(ir_times[i].highlen);
         crnl();
     }
 #endif

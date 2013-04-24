@@ -29,7 +29,7 @@ enum {
 
 extern char blind_cmd;
 #define do_blind_cmd(x)  do { blind_cmd = x; } while(0)
-extern char do_blind_report;
-#define  blind_report() do { do_blind_report = 1; } while(0)
+extern char position_report;
+#define  blind_report() do { position_report = 1; } while(0)
 
 // vile:noti:sw=4

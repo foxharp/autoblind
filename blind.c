@@ -85,12 +85,10 @@ enum {
 static char blind_is;
 
 
-// our desired position
-static int goal;
-
 // once we hit the limit switch, we stop, and wouldn't be able to
 // start again.  we allow ourselves to move a distance of
 // "ignore_limit" before paying attention to the switch again.
+// (unused, currently)
 static int ignore_limit;    
 
 // we want to save our more recent position in non-volatile memory,
@@ -98,6 +96,10 @@ static int ignore_limit;
 // we do the save 30 seconds after the last movement stopped.
 static long position_change_timer;
 static char position_changed;
+
+// our desired position
+static int goal;
+
 
 // this structure describes the data stored in non-volatile memory.
 // best not to rearrange it, but unless the "keep eeprom" fuse is
@@ -113,7 +115,8 @@ struct blind_config {
 } blc[1];
 
 /*
- * convert spool revolutions to inches of travel of the blind:
+ * convert spool revolutions to (roughly) inches of travel of the
+ * blind:
  *   inches = pulses * diameter * pi
  *   pulses = inches / (diameter * pi)
  *   pulses = inches / ( 3.15 * .2)
@@ -124,11 +127,11 @@ struct blind_config {
 #define NOMINAL_PEAK inch_to_pulse(18)
 
 // this is where user commands end up, whether from IR, the
-// button, or from monitor().
+// button, or from monitor().  do_blind_cmd() puts them here.
 char blind_cmd;
 
 // we print the blind's position to the serial port once per second
-char do_blind_report;
+char position_report;
 
 /* I/O -- read the limit switch, control the motors */
 static void set_motion(int on)
@@ -248,17 +251,6 @@ void blind_init(void)
 /* manage the shaft rotation interrupt, which lets us keep
  * track of where the blind is.
  */
-static int get_position(void)
-{
-    int p;
-
-    cli();
-    p = blc->position;
-    sei();
-
-    return p;
-}
-
 #if NEEDED
 static void blind_set_position(int p) // mainly for debug, for use from monitor
 {
@@ -275,6 +267,17 @@ static void zero_position(void)
 }
 #endif
 
+static int get_position(void)
+{
+    int p;
+
+    cli();
+    p = blc->position;
+    sei();
+
+    return p;
+}
+
 ISR(INT1_vect)          // rotation pulse
 {
     if (get_direction() == blc->up_dir)
@@ -289,8 +292,32 @@ ISR(INT1_vect)          // rotation pulse
     position_changed = 1;
 }
 
+void position_process(void)
+{
+    // save current position 30 seconds after it stops changing
+    if (position_changed &&
+            check_timer(position_change_timer, 30*1000)) {
+        blind_save_config();
+        position_changed = 0;
+    }
 
-/* control the motor, both on/off and direction */
+    if (position_report) {
+        static int last_pos;
+        int cur_pos;
+
+        cur_pos = get_position();
+        if (cur_pos != last_pos) {
+            p_hex(get_position());
+            last_pos = cur_pos;
+        }
+        position_report = 0;
+    }
+}
+
+/* control the motor, both on/off and direction.  these
+ * routines are the interface between the upper (blind) state
+ * machine and the lower (motor) state machine.
+ */
 static void stop_moving(void)
 {
     putstr("stop_moving\n");
@@ -342,14 +369,18 @@ static void blind_state(void)
         }
     }
 
+    /* handle incoming commands */
     if (blind_do != BLIND_NOP) {
-        // make sure this is always honored, and immediately
+
         if (blind_do == BLIND_STOP) {
+            // make sure STOP is always honored, and immediately
             stop_moving();
             blind_is = BLIND_IS_STOPPED;
             blind_do = BLIND_NOP;
             return;
-        } else if (blind_do == BLIND_TOP) {
+        }
+
+        if (blind_do == BLIND_TOP) {
             recent_goal = BLIND_TOP;
             goal = blc->top_stop;
         } else if (blind_do == BLIND_MIDDLE) {
@@ -364,6 +395,8 @@ static void blind_state(void)
             goal = get_position() - inch_to_pulse(18);
         }
 
+        /* except for BLIND_STOP, the actions for all commands
+         * are the same.  */
         if (pos < goal) {
             blind_is = BLIND_IS_RISING;
             start_moving_up();
@@ -374,6 +407,7 @@ static void blind_state(void)
             blind_is = BLIND_IS_STOPPED;
             stop_moving();
         }
+
         blind_do = BLIND_NOP;
     }
 
@@ -384,7 +418,7 @@ static void blind_state(void)
 
     switch (blind_is) {
     case BLIND_IS_STOPPED:
-        if (get_motion()) {  // just in case
+        if (get_motion()) {  // just in case -- shouldn't happen
             putstr("failsafe STOP\n");
             set_motion(0);
         }
@@ -443,9 +477,9 @@ static void motor_state(void)
         break;
 
     case MOTOR_STOPPING:
-        // wait for prior transitions to complete
+        // wait for prior transitions to complete...
         if (check_timer(motor_state_timer, 50)) {
-            // then we reverse the direction relay to force a stop
+            // ...then we reverse the direction relay to force a stop
             set_direction(!get_direction());
 
             motor_cur = MOTOR_BRAKING;
@@ -454,9 +488,9 @@ static void motor_state(void)
         }
         break;
     case MOTOR_BRAKING:
-        // wait for prior transitions to complete
+        // wait for prior transitions to complete...
         if (check_timer(motor_state_timer, 50)) {
-            // then we idle the direction relay
+            // ...then we idle the direction relay
             set_direction(0);
 
             motor_cur = MOTOR_STOPPED;
@@ -466,10 +500,11 @@ static void motor_state(void)
         break;
 
     case MOTOR_STOPPED:
-        // wait for prior transitions to complete
+        // wait for prior transitions to complete...
         if (check_timer(motor_state_timer, 50)) {
 
-            // we're stopped, and want to start.  set direction first
+            // ...and now we're stopped, and want to start.
+            // set direction first
             if (motor_next == MOTOR_UP && get_direction() != blc->up_dir) {
                 set_direction(blc->up_dir);
                 break;
@@ -491,11 +526,15 @@ static void motor_state(void)
 }
 
 /*
- * translate incoming IR remote button presses to blind commands
+ * translate incoming IR remote button presses to blind commands.
+ * commands are either single "normal" presses, or some number of
+ * ALT buttons followed by a "normal" press.
+ * we use just 5 IR buttons:  three should take us to the "top",
+ * "middle", and "bottom" positions, as well as "stop" and "alt".
  */
 static void blind_ir(void)
 {
-    char cmd;
+    char ir;
     static long alt_timer;
     static char alt;
 
@@ -507,11 +546,11 @@ static void blind_ir(void)
     if (!ir_avail())
         return;
 
-    cmd = get_ir();
-    if (cmd == -1)
+    ir = get_ir();
+    if (ir == -1)
         return;
 
-    switch (cmd) {
+    switch (ir) {
     case IR_TOP:
             if (alt) {
                 if (alt == 1) {      // alt top
@@ -583,30 +622,23 @@ static void blind_ir(void)
     alt = 0;
 }
 
-static char blind_get_cmd(void)
-{
-    char cmd;
 
-    if (!blind_cmd)
-        return 0;
-
-    cmd = blind_cmd;
-    blind_cmd = 0;
-
-    return cmd;
-}
-
-// interpret external commands.  do some here, pass some
-// on to the state machine.
+/*
+ * interpret external blind commands.  some are handled right
+ * here, some are passed on to the state machine.
+ */
 void blind_commands(void)
 {
     char cmd;
 
-    cmd = blind_get_cmd();
-    if (!cmd)
+    if (!blind_cmd)
         return;
 
+    cmd = blind_cmd;
+    blind_cmd = 0;
+
     switch (cmd) {
+
     case BL_STOP:
         blind_do = BLIND_STOP;
         break;
@@ -622,6 +654,8 @@ void blind_commands(void)
     case BL_GO_BOTTOM:
         blind_do = BLIND_BOTTOM;
         break;
+
+
 
     case BL_SET_TOP:
         blc->top_stop = get_position();
@@ -641,6 +675,7 @@ void blind_commands(void)
         blind_save_config();
         break;
 
+
     case BL_FORCE_UP:
         blind_do = BLIND_FORCE_UP;
         break;
@@ -649,47 +684,36 @@ void blind_commands(void)
         blind_do = BLIND_FORCE_DOWN;
         break;
 
+
+
     case BL_ONE_BUTTON:
         blind_do = BLIND_TOGGLE;
         break;
 
+    // this command changes the motor's mapping of clockwise or
+    // counter-clockwise to "blind up" and "blind down".
     case BL_INVERT:
         blc->up_dir = !blc->up_dir;
         blind_save_config();
         break;
     }
 }
+
 /*
  * get commands and drive the blind and motor state machine
  */
 void blind_process(void)
 {
-    // save current position 30 seconds after it stops changing
-    if (position_changed &&
-            check_timer(position_change_timer, 30*1000)) {
-        blind_save_config();
-        position_changed = 0;
-    }
 
-    if (do_blind_report) {
-        static int last_pos;
-        int cur_pos;
-
-        cur_pos = get_position();
-        if (cur_pos != last_pos) {
-            p_hex(get_position());
-            last_pos = cur_pos;
-        }
-        do_blind_report = 0;
-    }
+    position_process();
 
     blind_ir();
+
+    blind_commands();
 
     motor_state();
 
     blind_state();
-
-    blind_commands();
 
 }
 

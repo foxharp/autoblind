@@ -56,17 +56,17 @@
 #define CLKDIV_256  4
 #define CLKDIV_1024 5
 
-volatile word capture_len;
-volatile byte capture_is_low;
-volatile byte capture_overflow;
+volatile static word capture_len;
+volatile static byte capture_is_low;
+volatile static byte capture_overflow;
 
 #define MAX_PULSES 48
-byte ir_i;
-long ir_accum, ir_code;
-char ir_code_avail;
+static byte ir_i;
+static long ir_accum, ir_code;
+static char ir_code_avail;
 
 #ifdef PULSE_DEBUG
-struct pulsepair {
+static struct pulsepair {
     unsigned int lowlen;
     unsigned int highlen;
 } ir_header, ir_times[MAX_PULSES];
@@ -308,12 +308,11 @@ struct irc {
 };
 
 /*
- * wait for an IR press, and return an index into the table above.
- * this really blocks, so ir_avail() should be called first if that's
- * not desireable.
+ * if there's an IR press available, return an index into the table above.
  *
- * may return -1 if:
- *  - the received code isn't recognized (isn't in table, above)
+ * may return 0 if:
+ *  - no press is available
+ *  - the received code isn't configured in table, above.
  *  - the received code matches the previous, and not enough time
  *    has passed.
  */
@@ -323,42 +322,40 @@ char get_ir(void)
     long ircode;
     int ircmd;
 
-    while (1) {
-        if (ir_code_avail) {
-            static long dup_timer;
-            static long last_ir_code;
+    static long dup_timer;
+    static long last_ir_code;
 
-            ir_code_avail = 0;
+    if (!ir_code_avail)
+        return 0;
 
-            if (!check_timer(dup_timer, 130) && last_ir_code == ir_code) {
-                dup_timer = get_ms_timer();
-                return -1;
-            }
+    ir_code_avail = 0;
 
-            dup_timer = get_ms_timer();
-            last_ir_code = ir_code;
+    if (!check_timer(dup_timer, 130) && last_ir_code == ir_code) {
+        dup_timer = get_ms_timer();
+        return 0;
+    }
 
-            ircp = ir_remote_codes;
+    dup_timer = get_ms_timer();
+    last_ir_code = ir_code;
 
-            // loop through the table, and return the index on a match.
-            while(1) {
-                ircode = pgm_read_dword(&ircp->ir_code);
-                if (!ircode) {
-                    p_hex32(ir_code); crnl();
-                    return -1;
-                }
+    ircp = ir_remote_codes;
 
-                if (ir_code == ircode) {
-                    ircmd = pgm_read_byte(&ircp->ir_cmd);
-                    p_hex32(ir_code); 
-                    p_hex(ircmd); crnl();
-                    return ircmd;
-                }
-
-                ircp++;
-            }
+    // loop through the table, and return the index on a match.
+    while(1) {
+        ircode = pgm_read_dword(&ircp->ir_code);
+        if (!ircode) {
+            p_hex32(ir_code); crnl();
+            return 0;
         }
-        wdt_reset();
+
+        if (ir_code == ircode) {
+            ircmd = pgm_read_byte(&ircp->ir_cmd);
+            p_hex32(ir_code); 
+            p_hex(ircmd); crnl();
+            return ircmd;
+        }
+
+        ircp++;
     }
 }
 

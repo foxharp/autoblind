@@ -15,3 +15,9 @@
 
 void button_process(void);
 void button_init(void);
+char get_button(void);
+
+enum {
+    BUTTON_SHORT = 1,
+    BUTTON_LONG,
+};

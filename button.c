@@ -31,6 +31,8 @@ enum {
     BUTTON_IS_DOWN,
 };
 
+static char button_code;
+
 void button_init(void)
 {
     BUTTON_PORT |= bit(BUTTON_BIT); // enable pullup
@@ -84,16 +86,32 @@ void button_process(void)
         // check for a long press first
         if (check_timer(button_timer, 1000)) {
             putstr("long button\n");
-            do_blind_cmd(BL_GO_BOTTOM);
+            button_code = BUTTON_LONG;
             break;
         }
 
         // short press
         putstr("short button\n");
-        do_blind_cmd(BL_ONE_BUTTON);
+        button_code = BUTTON_SHORT;
         break;
 
     }
+}
+
+/*
+ * if a button press is available, return which type of press,
+ * else return 0.
+ */
+char get_button(void)
+{
+    char butt;
+
+    if (!button_code)
+        return 0;
+
+    butt = button_code;
+    button_code = 0;
+    return butt;
 }
 
 // vile:noti:sw=4

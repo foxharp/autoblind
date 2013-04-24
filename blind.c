@@ -14,6 +14,7 @@
 #include "timer.h"
 #include "util.h"
 #include "blind.h"
+#include "button.h"
 #include "ir.h"
 
 /*
@@ -526,6 +527,32 @@ static void motor_state(void)
 }
 
 /*
+ * a short button press will cause the blind to behave much
+ * like a typical garage door opener does:  it will cycle through
+ * moving-up/stop/moving-down/stop on each press.  the limits
+ * in this case are the top and middle positions.  giving the button
+ * a long press will take it to the bottom position.  the next
+ * short press will take it back to the middle.
+ */
+static void blind_button(void)
+{
+    char button;
+
+    button = get_button();
+    if (!button)
+        return;
+
+    switch(button) {
+    case BUTTON_SHORT:
+        do_blind_cmd(BL_ONE_BUTTON);
+        break;
+    case BUTTON_LONG:
+        do_blind_cmd(BL_GO_BOTTOM);
+        break;
+    }
+}
+
+/*
  * translate incoming IR remote button presses to blind commands.
  * commands are either single "normal" presses, or some number of
  * ALT buttons followed by a "normal" press.
@@ -543,11 +570,8 @@ static void blind_ir(void)
         alt = 0;
     }
 
-    if (!ir_avail())
-        return;
-
     ir = get_ir();
-    if (ir == -1)
+    if (!ir)
         return;
 
     switch (ir) {
@@ -708,7 +732,7 @@ void blind_process(void)
     position_process();
 
     blind_ir();
-
+    blind_button();
     blind_commands();
 
     motor_state();

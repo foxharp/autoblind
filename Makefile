@@ -67,6 +67,7 @@ $(PROG).out: $(OBJS)
 	$(NM) -n $@ >$(PROG).map
 	@echo current size is:
 	@$(SIZE) $(PROG).out
+	@echo built $(VERSION)
 
 $(PROG).hex: $(PROG).out
 	$(OBJCOPY) -R .eeprom -O ihex $^ $@

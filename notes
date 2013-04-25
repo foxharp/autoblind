@@ -1,0 +1,191 @@
+
+pin restrictions:
+
+    IR_IN needs to be on an input capture pin:  PA4 on attiny861
+
+    SUART_RX serial needs to be on INT0:  PB6 on attiny861
+    SUART_TX serial needs to be on OC1A:  PB1 on attiny861
+
+    MOTOR_TURN needs to be on INT1:  PA2 on attiny861
+
+    bootloader uses PA2?
+
+    PB0, PB1, PB2, and PB7 (reset) are used during programming.
+    PB2 is connected XOstick button, and we use it for debug mode
+    PB0 and PB1 are the LEDs
+    PB3 and PB4 are used for USB
+
+    that leaves PB3, PB4, PB5, PA0, PA1, PA3 - PA7
+
+pin choices:
+    MOTOR_ON    PA0
+    MOTOR_DIR   PA1
+    MOTOR_TURN  PA2
+
+    LIMIT       PA3
+
+    IR_IN       PA4
+
+    PDEBUG      PB2
+
+    SUART_RX    PB6
+    SUART_TX    PB1
+
+    TONE        PA5 and PA6
+
+
+connector pinouts:
+
+  LED end of board, from top
+
+                                    cable color
+                                    ----------
+    6-pin, to motor
+        GND                         black
+        MOTOR_DIR       PA1         green
+        MOTOR_ON        PA0         blue
+        nc
+        MOTOR_TURN      PA2         brown
+        +5                          red
+
+    2-pin, to limit switch
+        LIMIT           PA3         yellow
+        GND                         black
+
+    4-pin, to IR sensor
+        GND                         black
+        BUTTON          PB2         yellow
+        IR              PA4         green
+        +5                          red
+
+  USB end of board
+
+
+motor pinouts:
+
+    remove existing wires from G, Y, R, and B.
+    wire with:
+        G -- green
+        Y -- blue
+        R -- brown
+        B -- black
+             red -- goes to pad of existing red wire (of shielded
+                    that goes to pulse sensor)
+
+
+-------------switches---------
+
+cscott's choice:  FSM6JH - TE Connectivity      450-1652-ND     
+longer post:    FSM11JH - TE Connectivity       450-1753-ND
+
+
+---------wiring--------
+
+        across  up   across
+switch:   18" + 26" + 18"           62"
+
+        across  up   further up
+sensor:     18" + 26" + 36"         80"
+
+---------- extended commands for one-button ---
+
+long, up      force up
+long, down    force down
+long, long, up    set upper limit
+long, long, down  set lower limit
+
+-------X10 bottle-opener remote
+
+begin remote
+
+  name  X10_opener
+  bits           13
+  flags SPACE_ENC|CONST_LENGTH|REPEAT_HEADER
+  eps            30
+  aeps          100
+
+  header       4574  4549
+  one           554  1666
+  zero          554   554
+  ptrail        524
+  repeat        510   595
+  pre_data_bits   16
+  pre_data       0xE0E0
+  post_data_bits  3
+  post_data      0x7
+  gap          107606
+  repeat_bit      0
+
+      begin codes
+          left                     0x0000000000001A05
+          right                    0x0000000000001C03
+          up                       0x0000000000000916
+          down                     0x000000000000011E
+          center                   0x0000000000001E01
+          power                    0x0000000000000817
+      end codes
+
+end remote
+
+
+--------   non-volatile config ----
+
+    - IR codes
+    - top (and bottom) motion limits
+
+
+
+
+----------------------
+
+moving initialized data (incl. strings) to program memory
+
+
+i know this topic is well covered in the avr-libc docs, but i've come up with a technique that i haven't seen written up before, and thought i'd share it -- in case someone else finds it useful, in case it's already documented and i missed it, and in case there's a huge downside i haven't yet considered.
+
+to start:  i don't think i've ever worked on an embedded system (on the scale of an 8-bit micro) where i needed my initialized data to be in RAM.  having it read-only, and stored with the code, is just fine.  yes, it breaks C semantics, and in the AVR world requires special accessors (i.e., pgm_read_xxxx()), but the RAM space savings is always worth it.
+
+so:  i took a copy of avr25.x, the default avr-ld linker script for my attiny861, and changed a single line.  at the point where the .data sections are "redirected" into data memory, those sections are simply put into text memory, instead:
+[code]
+  .data   : AT (ADDR (.text) + SIZEOF (.text))
+  {
+     PROVIDE (__data_start = .) ;
+    *(.data)
+    *(.data*)
+    *(.rodata)  /* We need to include .rodata here if gcc is used */
+    *(.rodata*) /* with -fdata-sections.  */
+    *(.gnu.linkonce.d*)
+    . = ALIGN(2);
+     _edata = . ;
+     PROVIDE (__data_end = .) ;
+/*
+ * "} > data" replaced, in order to move data to flash */
+ */
+  }  > text
+[/code]
+
+this has the effect of giving __data_start and __data_load_start both the same address value, pointing into codespace.  since this would in turn break the behavior of __do_copy_data (the routine in crt0 that moves the initial copy of initialized data from flash to RAM), i added the following to main.c:
+[code]
+// override default __do_copy_data(), since we build with
+// a linker script that leaves data in flash.
+void __do_copy_data(void) { }
+[/code]
+
+and that's it.  all double-quoted strings are now in code space, with no further __attribute__ magic needed.  other initialized data moves as well.  (i never have much of that, so that's not as big a deal for me.)  all such data needs to be accessed via pgm_read_xxxx() routines, but that's a good trade against having two copies of every string (one in flash, one in RAM).
+
+i'm pleased with this solution.  i like taking advantage of the fairly generous flash on modern chips to include sufficient of debugging text, but jumping through hoops to keep those strings out of RAM was frustrating.
+
+can anyone see a big downside?  is there code in the libraries that depends on RAM-based initialized data?  i'm going to add a Makefile check to detect such instances, just in case -- something based along the lines of:
+[code]
+grep -v 'D _edata' myprog.map  | grep ' [dD] '
+[/code]
+which basically checks for named objects in the data section.
+
+comments welcome.
+
+
+
+
+-------------
+
+// vile:noti:sw=4

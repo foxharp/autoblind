@@ -64,7 +64,7 @@ static byte ir_i;
 static long ir_accum, ir_code;
 static char ir_code_avail;
 
-#ifdef PULSE_DEBUG
+#if PULSE_DEBUG
 static struct pulsepair {
     unsigned int lowlen;
     unsigned int highlen;
@@ -200,7 +200,7 @@ ir_process(void)
             )
         {
             ir_i = 0;
-#ifdef PULSE_DEBUG
+#if PULSE_DEBUG
             ir_header.lowlen = lowlen;
             ir_header.highlen = len;
 #endif
@@ -240,7 +240,7 @@ ir_process(void)
             ir_accum |= 1;
         }
 
-#ifdef PULSE_DEBUG
+#if PULSE_DEBUG
         ir_times[ir_i].lowlen = lowlen;
         ir_times[ir_i].highlen = len;
 #endif

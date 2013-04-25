@@ -57,9 +57,9 @@ solder together.  in addition, the XO Stick has some on-board
 prototyping area which is very useful for the inevitable extra
 components that come along with any project.
 
-XO stick top:  pix/xo_stick_top.jpg
+![ XO stick top ]( pix/xo_stick_top.jpg )
 
-XO stick bottom:  pix/xo_stick_bottom.jpg
+![ XO stick bottom ]( pix/xo_stick_bottom.jpg )
 
 in addition to the XO Stick itself, i needed a limit switch that
 could be triggered somehow by something attached to the cord on
@@ -70,12 +70,12 @@ badge holder that i got at some conference or other, and the
 "case" for the module is the transparent plastic box that once
 held an SD card.
 
-IR sensor:  pix/ir_sensor.jpg
+![ IR sensor ]( pix/ir_receiver.jpg )
 
 for the limit switch, i initially made my own magnetic sensor
 from an old reed switch and some aluminum tubing.
 
-Limit switch:  pix/limit_switch.png
+![ Limit switch ]( pix/limit_switch.png )
 
 i mounted that parallel to and even with the bottom of the window
 sill, and triggered it with a magnet fastened to the blind cord. 
@@ -88,10 +88,12 @@ hardware.  there's some 12V logic that includes closure-to-ground
 control for motor on/off and direction control.  there's also a
 5V circuit that drives a per-rotation pulse.
 
-Motor internals:  pix/motor_inside.jpg
+![ Motor: ]( pix/motor.jpg )
+![ Motor internals ]( pix/motor_inside.jpg )
 
-more detail of the motor [here](pix/gear_detail.jpg),
-[here](pix/motor_pcb1_detail.jpg), and [here](pix/motor_pcb2_detail.jpg). 
+more detail of the motor [ here ]( pix/motor_gear_detail.jpg ), [
+here ]( pix/motor_pcb1_detail.jpg ), and [ here ](
+pix/motor_pcb2_detail.jpg ). 
 
 i tapped into that 5V supply for the XO Stick power.  the
 per-rotation pulse was useable directly, and i used a couple of
@@ -100,13 +102,23 @@ have been able to do something simpler, but mosfets are pretty
 simple, and i wasn't sure exactly what kind of logic family i was
 connecting to.
 
+the business end of the motor is a thing that pops out to mate
+with the drapery mechanism when the motor is engaged -- it was a
+way of leaving the curtains in "neutral" so that they could be
+adjusted by hand when not using the motor.  i didn't use that
+facility at all -- happily there's also a hole in the end of the
+motor shaft, and i was able to stick in a tight-fitting nail
+(with a couple of washers added) to act as a spool.
+
+![ Cord spool ]( pix/spool.jpg )
+
 schematics
 ----------
-the [XO Stick schematic](./XO-Stick2-sch.pdf) itself describes
+the [ XO Stick schematic ]( ./XO-Stick2-sch.pdf ) itself describes
 most of the project.
 
 the schematic for the IR receiver can practically be read from
-the [photo](/pix/ir_receiver_close.jpg), but here's a rough diagram:
+the [ photo ]( pix/ir_receiver_close.jpg ), but here's a rough diagram:
 
  
         +---+   Panasonic PNA4602M or Sharp GP1UX511QS IR receiver
@@ -154,5 +166,5 @@ the pinouts i chose for the three connectors are
 
 that's about it.  oh -- i did need to add a pull-down to the motor on/off
 input (PA0) to keep the motor from turning on while programming
-the chip.  you can see that on the [bottom](pix/xostick_bottom.jpg)
-of the board.
+the chip.  that 15K resistor goes from PA0 to ground.
+

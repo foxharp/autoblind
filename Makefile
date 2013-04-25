@@ -50,7 +50,7 @@ LFLAGS = -mmcu=$(MCU)
 # declaring "int foo = 45;" and then trying to access 'foo'
 # normally won't work.
 CFLAGS += -DALL_STRINGS_PROGMEM
-LFLAGS += -T avr25.x.data_in_flash
+LFLAGS += -T avr25.x.ro_data
 
 HOSTCC = gcc
 

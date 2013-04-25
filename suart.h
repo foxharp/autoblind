@@ -41,8 +41,9 @@
 # define STIMSK TIMSK1
 
 #elif defined(_AVR_IOTN861_H_)
+#define RX_USE_INPUT_CAPTURE_INT 0
 
-#ifdef RX_USE_INPUT_CAPTURE_INT
+#if RX_USE_INPUT_CAPTURE_INT
 # define SRX     PA4                    // ICP on tiny??
 # define SRXPIN  PINA
 #else

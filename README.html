@@ -44,9 +44,9 @@ solder together.  in addition, the XO Stick has some on-board
 prototyping area which is very useful for the inevitable extra
 components that come along with any project.</p>
 <p>XO stick top:<br />
-<img alt="image of XO stick top" src="pix/xo_stick_top.png" /></p>
+<img alt="image of XO stick top" src="pix/xo_stick_top.jpg" /></p>
 <p>XO stick bottom:<br />
-<img alt="image of XO stick bottom" src="pix/xo_stick_bottom.png" /></p>
+<img alt="image of XO stick bottom" src="pix/xo_stick_bottom.jpg" /></p>
 <p>in addition to the XO Stick itself, i needed a limit switch that
 could be triggered somehow by something attached to the cord on
 the blind, an IR sensor, and an external pushbutton.  i built the
@@ -56,7 +56,7 @@ badge holder that i got at some conference or other, and the
 "case" for the module is the transparent plastic box that once
 held an SD card.</p>
 <p>IR sensor:<br />
-<img alt="image of IR sensor" src="pix/ir_sensor.png" /></p>
+<img alt="image of IR sensor" src="pix/ir_sensor.jpg" /></p>
 <p>for the limit switch, i initially made my own magnetic sensor
 from an old reed switch and some aluminum tubing.</p>
 <p>Limit switch:<br />
@@ -71,7 +71,9 @@ hardware.  there's some 12V logic that includes closure-to-ground
 control for motor on/off and direction control.  there's also a
 5V circuit that drives a per-rotation pulse.</p>
 <p>Motor internals:<br />
-<img alt="image of Motor internals" src="pix/sj_vase_tamil.png" /></p>
+<img alt="image of Motor internals" src="pix/motor_inside.jpg" /></p>
+<p>more detail of the motor <a href="pix/gear_detail.jpg">here</a>,
+<a href="pix/motor_pcb1_detail.jpg">here</a>, and <a href="pix/motor_pcb2_detail.jpg">here</a>. </p>
 <p>i tapped into that 5V supply for the XO Stick power.  the
 per-rotation pulse was useable directly, and i used a couple of
 mosfets for the closure to ground inputs to the motor.  i may
@@ -82,7 +84,7 @@ connecting to.</p>
 <p>the <a href="./XO-Stick2-sch.pdf">XO Stick schematic</a> itself describes
 most of the project.</p>
 <p>the schematic for the IR receiver can practically be read from
-the <a href="/pix/carbonator.png">photo</a>, but here's a rough diagram:</p>
+the <a href="/pix/ir_receiver_close.jpg">photo</a>, but here's a rough diagram:</p>
 <pre><code>    +---+   Panasonic PNA4602M or Sharp GP1UX511QS IR receiver
     | O |   (looking at the front)
     |   |
@@ -123,3 +125,7 @@ the <a href="/pix/carbonator.png">photo</a>, but here's a rough diagram:</p>
   USB end
   of board
 </code></pre>
+<p>that's about it.  oh -- i did need to add a pull-down to the motor on/off
+input (PA0) to keep the motor from turning on while programming
+the chip.  you can see that on the <a href="pix/xostick_bottom.jpg">bottom</a>
+of the board.</p>

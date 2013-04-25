@@ -5,8 +5,8 @@ autoblind -- window blind automation, using an XOStick.
 background
 ----------
 about 15 years ago i bought some surplus Makita drapery motors
-(http://tinyurl.com/bqpafrt), figured out how to use them, and
-then never did anything with them.
+(http://tinyurl.com/bqpafrt, opens in google groups), figured out
+how to use them, and then never did anything with them.
 
 in the meantime, i've done a lot of embedded programming,
 including on AVR micros.  when OLPC decided to use some extra

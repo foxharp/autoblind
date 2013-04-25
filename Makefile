@@ -99,11 +99,6 @@ tarball: all clean
 	mv ../$(PROG)-$(VERSION).tar.gz .
 	rm -f ../$(PROG)-$(VERSION)
 
-markdown:
-	cat README | \
-	 sed -e 's/^\([^:]\+\):  *\(pix.*\)/\1:  \n![image of \1](\2)/' | \
-	  markdown_py >README.html
-
 program:
 	sudo avrdude -c usbtiny -p t861 -U $(PROG).hex
 

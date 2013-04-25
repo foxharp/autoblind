@@ -623,7 +623,13 @@ static void blind_ir(void)
 
     case IR_STOP:
             if (alt) {
-                if (alt == 3) {     // alt alt alt stop
+                if (alt == 5) {     // alt alt alt alt alt stop
+                    /* reset all stops */
+                    blc->top_stop = MAXPOS;
+                    blc->middle_stop = -MAXPOS;
+                    blc->bottom_stop = -MAXPOS;
+                    tone_start(TONE_CONFIRM);
+                } else if (alt == 3) {     // alt alt alt stop
                     do_blind_cmd(BL_INVERT);
                     tone_start(TONE_CONFIRM);
                 } else {

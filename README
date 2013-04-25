@@ -1,0 +1,66 @@
+
+autoblind -- window blind automation, using an XOStick.
+---------------
+
+background
+----------
+about 15 years ago i bought some surplus Makita drapery motors
+(http://tinyurl.com/bqpafrt), figured out how to use them, and
+then never did anything with them.
+
+in the meantime, i've done a lot of embedded programming,
+including on AVR micros.  when OLPC decided to use some extra
+circuit board space to create the XO Stick boards
+(http://wiki.laptop.org/go/XO_Stick), i wanted to build something
+with one of them, and i remembered my motors.  we've lost some
+trees around the house lately, so the privacy afforded by the
+window blinds has become more important.  it seemed like the
+right time for some automation.
+
+and now in the morning i can open the blinds at either end of the
+room to see what it's like outside, before i ever get out of bed.
+
+the project
+-----------
+the complete project gives full up/down control of a single
+window blind.  (i've built two, one for each window.) the blind
+can be controlled with a button mounted near the window (mine are
+clipped to the curtain), or from a recycled IR remote.  there are
+commands to raise and lower the blind.  three preset positions
+may be configured for one-touch adjustment.  there's provision
+for a hard limit switch, so that a runaway motor won't drag the
+blind off the window.  there's also a serial console port with a
+simple command-line interface, very useful for development and
+debugging.
+
+it's all written in C, using avr-gcc.  the processor on the XO
+Stick is an ATtiny861.  it does _not_ use any of the USB
+capabilities of the XO Stick, for either booting or operation.  i
+have a USBTiny programmer for programming, and there's no need
+for USB for this project.  it also doesn't use any of the Arduino
+libraries -- it's all in raw C.
+
+while my particular application is fairly specific to my needs, i
+tried to write the main loop and the IR, button, timer, and
+software-driven uart modules in a fairly generic way, for ease of
+reuse.
+
+
+the hardware
+------------
+the XO Stick is described here http://wiki.laptop.org/go/XO_Stick
+and here http://cananian.livejournal.com/66129.html.  while the
+XOrduino is way more powerful, it's overkill for most of my home
+project needs, it's more expensive, and it's much harder to
+solder together.  in addition, the XO Stick has some on-board
+prototyping area which is very useful for the inevitable extra
+components that come along with any project.
+
+in addition to the XO Stick itself, i needed a limit switch that
+could be triggered somehow by something attached to the cord on
+the blind, an IR sensor, and an external pushbutton.  i built the
+IR sensor and the button into the same little module, small
+enough to be clipped to the curtain.  i reused the clip from a
+badge holder that i got at some conference or other, and the
+"case" for the module is the transparent plastic box that once
+held an SD card.

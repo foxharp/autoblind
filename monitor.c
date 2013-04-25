@@ -44,7 +44,7 @@ static char getline(void)
 {
     char c;
 
-    if (!kbhit())  // don't block -- getch() would loop forever
+    if (!getch_avail())  // don't block -- getch() would loop forever
         return 0;
 
     c = getch();
@@ -340,7 +340,7 @@ void monitor(void)
     int i;
     char c;
 
-    if (!kbhit())
+    if (!getch_avail())
         return;
 
     c = getch();

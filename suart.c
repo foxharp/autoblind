@@ -1,15 +1,12 @@
-/************************************************************************/
-/*                                                                      */
-/*                      Software UART using T1                          */
-/*                                                                      */
-/*              Author: P. Dannegger                                    */
-/*                      danni@specs.de                                  */
-/*                                                                      */
-/************************************************************************/
 /*
- * This file included in irmetermon by written permission of the
- * author.  irmetermon is licensed under GPL version 2, see accompanying
- * LICENSE file for details.
+ * Copyright 2007,2013 Paul Fox, pgf@foxharp.boston.ma.us
+ *
+ * originally based on:
+ *  Software UART using T1, P. Dannegger,  danni@specs.de
+ *
+ * Licensed under GPL version 2 by written permission.
+ * See accompanying LICENSE file for details.
+ *
  */
 
 #include <avr/io.h>
@@ -20,8 +17,25 @@
 #include "timer.h"
 #include "suart.h"
 
+/*
+ * software-driven uart for uart-less AVR chips.
+ *
+ * transmit data is driven by repeated reconfiguration of the
+ * output value which will be set as the result of a "Compare
+ * Output Mode" timer match.
+ *
+ * receive data is capture either using an "Input Compare Match"
+ * pin (which snapshots a timer value when an input changes), or
+ * by an external interrupt (where the interrupt handler does much
+ * the same thing).
+ */
+
+// either or both of RX or TX data can be inverted
 #define TX_INVERT 0
 #define RX_INVERT 0
+
+// reception can be disabled if it's not needed
+#define NO_RECEIVE 0
 
 // timer running at 1Mhz
 #define BIT_TIME    (unsigned int)((1000000 + BAUD/2) / BAUD)
@@ -29,7 +43,7 @@
 volatile unsigned char stx_bits;
 volatile unsigned char stx_data;
 
-#ifndef NO_RECEIVE
+#if ! NO_RECEIVE
 volatile unsigned char srx_done;
 volatile unsigned char srx_data;
 volatile unsigned char srx_mask;
@@ -68,7 +82,7 @@ void suart_init(void)
     STIMSK |= bit(OCIE1A);      // enable tx
 
 
-#ifndef NO_RECEIVE
+#if ! NO_RECEIVE
 # if RX_USE_INPUT_CAPTURE_INT
     // enable noise canceller
     TCCR1B = bit(ICNC1);
@@ -95,7 +109,9 @@ void suart_init(void)
 }
 
 
-#ifndef NO_RECEIVE
+#if ! NO_RECEIVE
+// getch() will block until characters are available.  use
+// the macro getch_avail() as a non-blocking test if required.
 unsigned char getch(void)       // get byte
 {
     while (!srx_done)           // wait until byte received

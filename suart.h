@@ -66,12 +66,12 @@
 
 void putch(char c);
 
-#ifndef NO_RECEIVE
+#if ! NO_RECEIVE
 extern volatile unsigned char srx_done;
 unsigned char getch(void);
-#define kbhit() (srx_done)              // true if byte received
+#define getch_avail() (srx_done)              // true if byte received
 #else
-#define kbhit() (0)                     // never true
+#define getch_avail() (0)                     // never true
 #endif
 
 extern volatile unsigned char stx_count;

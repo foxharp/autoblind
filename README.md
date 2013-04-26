@@ -75,7 +75,7 @@ held an SD card.
 For the limit switch, I initially made my own magnetic sensor
 from an old reed switch and some aluminum tubing.
 
-![ Limit switch ]( pix/limit_switch.png )
+![ Limit switch ]( pix/limit_switch.jpg )
 
 I mounted that parallel to and even with the bottom of the window
 sill, and triggered it with a magnet fastened to the blind cord.

@@ -89,7 +89,6 @@ static char blind_is;
 // once we hit the limit switch, we stop, and wouldn't be able to
 // start again.  we allow ourselves to move a distance of
 // "ignore_limit" before paying attention to the switch again.
-// (unused, currently)
 static int ignore_limit;    
 
 // we want to save our more recent position in non-volatile memory,
@@ -396,12 +395,14 @@ static void blind_state(void)
             goal = get_position() - inch_to_pulse(18);
         }
 
-        /* except for BLIND_STOP, the actions for all commands
-         * are the same.  */
+        /* the actions for all commands (except BLIND_STOP) are
+         * the same.  they just have different goals.  */
         if (pos < goal) {
             blind_is = BLIND_IS_RISING;
+            if (blind_at_limit())
+                ignore_limit = inch_to_pulse(2);
             start_moving_up();
-        } else if (pos > goal) {
+        } else if (pos > goal && !blind_at_limit()) {
             blind_is = BLIND_IS_FALLING;
             start_moving_down();
         } else {
@@ -425,13 +426,13 @@ static void blind_state(void)
         }
         break;
     case BLIND_IS_FALLING:
-        if (pos <= goal) {
+        if (blind_at_limit() || pos <= goal) {
             stop_moving();
             blind_is = BLIND_IS_STOPPED;
         }
         break;
     case BLIND_IS_RISING:
-        if (pos >= goal) {
+        if ((blind_at_limit() && !ignore_limit) || pos >= goal) {
             stop_moving();
             blind_is = BLIND_IS_STOPPED;
         }

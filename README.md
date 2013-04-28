@@ -79,7 +79,7 @@ from an old reed switch and some aluminum tubing.
 
 I mounted that parallel to and even with the bottom of the window
 sill, and triggered it with a magnet fastened to the blind cord.
-that worked, but was harder to mount that I'd like.  I think I'll
+that worked, but was harder to mount than I'd like.  I think I'll
 explore using a standard burglar-alarm style magnetic sensor
 next.
 

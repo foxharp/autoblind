@@ -21,6 +21,8 @@ And now, in the morning, I can open the blinds at either end of
 the room to see what it's like outside before I ever get out of
 bed.
 
+![ animation window blind ]( pix/blind6.gif )
+
 the project
 -----------
 The complete project gives full up/down control of a single

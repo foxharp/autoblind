@@ -362,10 +362,10 @@ static void blind_state(void)
     if (blind_do == BLIND_TOGGLE) {
         if (blind_is != BLIND_IS_STOPPED) {
             blind_do = BLIND_STOP;
-        } else if (recent_goal == BLIND_MIDDLE) {
-            blind_do = BLIND_TOP;
-        } else {
+        } else if (recent_goal == BLIND_TOP) {
             blind_do = BLIND_MIDDLE;
+        } else {
+            blind_do = BLIND_TOP;
         }
     }
 

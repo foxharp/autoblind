@@ -79,6 +79,21 @@ cscott's choice:  FSM6JH - TE Connectivity      450-1652-ND
 longer post:    FSM11JH - TE Connectivity       450-1753-ND
 
 
+-------motor size----
+
+3.5" x 2" x 8.5" (or x 11" including spool)
+sound insulation: add 2"
+so a box with sound insulation should be:
+7.5 x 6 x 12.5  (or x 15" including spool)  (inside dimension)
+assume 3/4" construction, then:
+9 x 7.5 x 14  (or x 16.5")  (outside dimensions)
+
+baseboards are 4.5" high
+back window space is 37".  half that will fit for front window too.
+
+need long initial cord run for proper spindle winding.
+
+
 ---------wiring--------
 
         across  up   across
@@ -93,6 +108,16 @@ long, up      force up
 long, down    force down
 long, long, up    set upper limit
 long, long, down  set lower limit
+
+------- if one remote for both blinds is an issue, do one of:
+    - change UI so any button press is "stop".  separate
+        stop button is no longer needed, and can now be
+        the "middle" button instead.
+    - add an ID:  alt-alt-left or alt-alt-right tells the
+        blind that it's the left or right blind.
+    - the left or right buttons set the "mode":  a controller
+        will only respond if it's heard the appropriate "left"
+        or "right" command in the last, say, 30 seconds.
 
 -------X10 bottle-opener remote
 

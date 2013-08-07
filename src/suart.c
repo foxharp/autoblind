@@ -151,7 +151,7 @@ ISR(INT0_vect)              // rx start
     STIFR = bit(OCF1B);         // clear pending interrupt
 
     if (!SRX_HIGH(SRXPIN)) {    // still low (i.e., start bit)
-        STIMSK |= bit(OCIE1B);  // wait for first bit
+        STIMSK = bit(OCIE1B);   // wait for first bit, also turn off ICIE
     }
 
 }

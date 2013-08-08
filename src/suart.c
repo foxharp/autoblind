@@ -140,6 +140,7 @@ ISR(INT0_vect)              // rx start
 
     // schedule our next interrupt 1.5 bits from now
 #if RX_USE_INPUT_CAPTURE_INT
+    STIMSK &= ~bit(ICIE1);
     t1write10(OCR1B, t1read10_ICR1() + (unsigned int) (3 * BIT_TIME / 2));
 #else
     GIMSK &= ~bit(INT0);

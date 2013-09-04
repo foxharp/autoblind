@@ -94,8 +94,8 @@ static int ignore_limit;
 // we want to save our more recent position in non-volatile memory,
 // so that we still know where the blind is after a power failure.
 // we do the save 30 seconds after the last movement stopped.
-static long position_change_timer;
-static char position_changed;
+static long config_change_timer;
+static char config_changed;
 
 // our desired position
 static int goal;
@@ -221,13 +221,20 @@ void blind_read_config(void)
     blind_save_config();
 }
 
+/* request a timed config save */
 void blind_save_config(void)
+{
+    config_change_timer = get_ms_timer();
+    config_changed = 1;
+}
+
+/* really save the config */
+void blind_save_config_real(void)
 {
     putstr("saving config\n");
     eeprom_update_block(blc, (void *)0, sizeof(*blc));
     dump_config();
 }
-
 
 /* initilization */
 void blind_init(void)
@@ -289,19 +296,22 @@ ISR(INT1_vect)          // rotation pulse
     if (ignore_limit)
         ignore_limit--;
 
-    position_change_timer = get_ms_timer();
-    position_changed = 1;
+    blind_save_config();
+
+}
+
+void config_process(void)
+{
+    // save current position 30 seconds after it stops changing
+    if (config_changed &&
+            check_timer(config_change_timer, 30*1000)) {
+        blind_save_config_real();
+        config_changed = 0;
+    }
 }
 
 void position_process(void)
 {
-    // save current position 30 seconds after it stops changing
-    if (position_changed &&
-            check_timer(position_change_timer, 30*1000)) {
-        blind_save_config();
-        position_changed = 0;
-    }
-
     if (position_report) {
         static int last_pos;
         int cur_pos;
@@ -738,6 +748,7 @@ void blind_commands(void)
 void blind_process(void)
 {
 
+    config_process();
     position_process();
 
     blind_ir();

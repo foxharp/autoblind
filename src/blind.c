@@ -225,6 +225,7 @@ void blind_save_config(void)
 {
     putstr("saving config\n");
     eeprom_update_block((void *)blc, (void *)0, sizeof(*blc));
+    dump_config();
 }
 
 

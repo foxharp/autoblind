@@ -106,12 +106,13 @@ static int goal;
 // burnt in the processor, then the EEPROM is erased when a new
 // program is written anyway, so it doesn't matter much.
 struct blind_config {
+    int magic;
     int top_stop;
     int middle_stop;
     int bottom_stop;
     int position;
     int up_dir;
-    int padding[4];
+    int magic2;
 } blc[1];
 
 /*
@@ -198,29 +199,6 @@ void dump_config(void)
     }
 }
 
-void blind_read_config(void)
-{
-
-    eeprom_read_block(blc, 0, sizeof(*blc));
-
-    dump_config();
-
-    // set sensible defaults
-    if (blc->top_stop == 0xffff)
-        blc->top_stop = NOMINAL_PEAK;
-    if (blc->middle_stop == 0xffff)
-        blc->middle_stop = -MAXPOS;
-    if (blc->bottom_stop == 0xffff)
-        blc->bottom_stop = -MAXPOS;
-    if (blc->position == 0xffff)
-        blc->position = 10;
-    if (blc->up_dir == 0xffff)
-        blc->up_dir = 0;
-
-    // write back any updated values
-    blind_save_config();
-}
-
 /* request a timed config save */
 void blind_save_config(void)
 {
@@ -234,6 +212,29 @@ void blind_save_config_real(void)
     putstr("saving config\n");
     eeprom_update_block(blc, (void *)0, sizeof(*blc));
     dump_config();
+}
+
+void blind_read_config(void)
+{
+
+    eeprom_read_block(blc, 0, sizeof(*blc));
+
+    dump_config();
+
+    // set sensible defaults
+    if (blc->magic != 0xdead || blc->magic2 != 0xcafe) {
+        blc->top_stop = NOMINAL_PEAK;
+        blc->middle_stop = -MAXPOS;
+        blc->bottom_stop = -MAXPOS;
+        blc->position = 10;
+        blc->up_dir = 0;
+        blc->magic = 0xdead;
+        blc->magic2 = 0xcafe;
+    
+        // write back any updated values
+        blind_save_config_real();
+    }
+
 }
 
 /* initilization */

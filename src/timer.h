@@ -9,6 +9,7 @@
 
 void init_timer(void);
 long get_ms_timer(void);
+void set_ms_timer(long ms);
 unsigned char check_timer(long time0, long duration);
 void print_tstamp(void);
 

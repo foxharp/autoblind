@@ -54,7 +54,7 @@ enum {
     // MOTOR_REVERSE,
 };
 static char motor_cur, motor_next;
-static long motor_state_timer;
+long motor_state_timer;
 
 char blind_state_debug;
 char blind_motor_debug;
@@ -224,7 +224,7 @@ void blind_read_config(void)
 void blind_save_config(void)
 {
     putstr("saving config\n");
-    eeprom_update_block((void *)blc, (void *)0, sizeof(*blc));
+    eeprom_update_block(blc, (void *)0, sizeof(*blc));
     dump_config();
 }
 
@@ -308,6 +308,7 @@ void position_process(void)
 
         cur_pos = get_position();
         if (cur_pos != last_pos) {
+            print_tstamp();
             p_hex(get_position());
             last_pos = cur_pos;
         }

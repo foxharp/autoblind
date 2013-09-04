@@ -94,6 +94,18 @@ long get_ms_timer(void)
     return ms;
 }
 
+void set_ms_timer(long ms)
+{
+    char sreg;
+
+    sreg = SREG;
+    cli();
+
+    milliseconds = ms;
+
+    SREG = sreg;
+}
+
 unsigned char check_timer(long base, long duration)
 {
     return get_ms_timer() > (base + duration);

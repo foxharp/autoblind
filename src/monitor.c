@@ -245,6 +245,11 @@ void monitor(void)
         break;
 
     case 'T':
+        set_ms_timer((long)n | 0xffff0000L);
+        motor_state_timer = get_ms_timer();
+        break;
+
+    case 'P':
         {
             static const char *teststring = "foobar";
             // printf("testing: 0x%x, %s\n", 64, "hello");

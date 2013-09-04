@@ -6,6 +6,7 @@
  */
 extern char blind_state_debug;
 extern char blind_motor_debug;
+extern long motor_state_timer;
 
 void blind_init(void);
 void blind_process(void);

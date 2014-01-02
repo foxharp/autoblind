@@ -13,6 +13,7 @@
 #include "timer.h"
 #include "util.h"
 #include "blind.h"
+#include "limits.h"
 #include "common.h"
 
 #ifndef NO_MSTIMER
@@ -40,6 +41,9 @@ void print_tstamp(void) {}
 void init_timer(void)
 {
     int w10tmp;
+
+    // arrange to hit wraparound soon (5 minutes)
+    milliseconds = LONG_MAX - (5L * 60L * 1000L);
 
     TCCR1A = 0;     // normal port operation
 

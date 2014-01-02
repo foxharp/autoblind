@@ -295,6 +295,10 @@ void monitor(void)
         break;
 #endif
 
+    case 'V':
+        dump_config();
+        break;
+
     case 'w':
         // 'w addr data'
         addr = n;

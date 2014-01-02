@@ -13,6 +13,7 @@ void blind_process(void);
 void blind_save_config(void);
 void blind_read_config(void);
 char blind_at_limit(void);
+void dump_config(void);
 
 enum {
     BL_STOP = 1,

@@ -343,12 +343,14 @@ char get_ir(void)
     while(1) {
         ircode = pgm_read_dword(&ircp->ir_code);
         if (!ircode) {
+            print_tstamp();
             p_hex32(ir_code); crnl();
             return 0;
         }
 
         if (ir_code == ircode) {
             ircmd = pgm_read_byte(&ircp->ir_cmd);
+            print_tstamp();
             p_hex32(ir_code); 
             p_hex(ircmd); crnl();
             return ircmd;

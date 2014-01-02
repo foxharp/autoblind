@@ -245,7 +245,8 @@ void monitor(void)
         break;
 
     case 'T':
-        set_ms_timer((long)n | 0xffff0000L);
+        set_ms_timer(0x7fffffffL - ((long)n * 1000L));
+        print_tstamp();
         motor_state_timer = get_ms_timer();
         break;
 
@@ -296,6 +297,7 @@ void monitor(void)
 #endif
 
     case 'V':
+        print_tstamp();
         dump_config();
         break;
 

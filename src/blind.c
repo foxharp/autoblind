@@ -209,6 +209,7 @@ void blind_save_config(void)
 /* really save the config */
 void blind_save_config_real(void)
 {
+    print_tstamp();
     putstr("saving config\n");
     eeprom_update_block(blc, (void *)0, sizeof(*blc));
     dump_config();

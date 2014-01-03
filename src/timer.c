@@ -110,9 +110,16 @@ void set_ms_timer(long ms)
     SREG = sreg;
 }
 
-unsigned char check_timer(long base, long duration)
+unsigned char check_timer(long t0, long delta)
 {
-    return get_ms_timer() > (base + duration);
+    // the timer will eventually wrap from positive (0x7fffffff)
+    // to negative (0x80000000).  using a signed type for the
+    // timer and expressing the arithmetic carefully will
+    // guarantee that interval timers work correctly across this
+    // transition.  (at least as long as the interval timers are
+    // shorter than 2^31.)
+
+    return (get_ms_timer() - t0 > delta);
 }
 
 void short_delay(unsigned int n)

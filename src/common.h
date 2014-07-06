@@ -21,4 +21,7 @@ void force_reboot(void);
 #include <stdio.h>
 #endif
 
+#define BANNER PROGRAM_VERSION "\n"
+
+
 // vile:noti:sw=4

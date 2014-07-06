@@ -59,6 +59,8 @@ int main()
 
     sei();
 
+    putstr("\n" BANNER);
+
     blind_read_config();
 
     if (read_button()) do_debug_out();   // no return

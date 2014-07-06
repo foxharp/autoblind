@@ -26,8 +26,6 @@
 #define tohex(c) (((c) >= 'a') ? ((c) - 'a' + 10) : ((c) - '0'))
 
 
-#define BANNER PROGRAM_VERSION "\n"
-
 #ifndef NO_MONITOR
 #ifndef MINIMAL_MONITOR
 

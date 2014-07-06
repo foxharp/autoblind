@@ -141,46 +141,46 @@ void monitor(void)
         blind_motor_debug = gethex();
         break;
 
-    case 'u': // up
+    case 'u': // cmd:  up
         do_blind_cmd(BL_GO_TOP);
         break;
-    case 'm': // middle
+    case 'm': // cmd:  middle
         do_blind_cmd(BL_GO_MIDDLE);
         break;
-    case 'd': // down
+    case 'd': // cmd:  down
         do_blind_cmd(BL_GO_BOTTOM);
         break;
-    case 's': // stop
+    case 's': // cmd:  stop
         do_blind_cmd(BL_STOP);
         break;
 
-    case 'o': // one button control
+    case 'o': // cmd:  one button control
         do_blind_cmd(BL_ONE_BUTTON);
         break;
 
-    case 'f': // force up
+    case 'f': // cmd:  force up
         do_blind_cmd(BL_FORCE_UP);
         break;
-    case 'F': // force down
+    case 'F': // cmd:  force down
         do_blind_cmd(BL_FORCE_DOWN);
         break;
 
-    case 'U':
+    case 'U': // cmd:  set top
         do_blind_cmd(BL_SET_TOP);
         break;
-    case 'M':
+    case 'M': // cmd:  set middle
         do_blind_cmd(BL_SET_MIDDLE);
         break;
-    case 'D':
+    case 'D': // cmd:  set bottom
         do_blind_cmd(BL_SET_BOTTOM);
         break;
 
-    case 'I':
+    case 'I': // cmd: invert sense of direction
         // invert sense of direction
         do_blind_cmd(BL_INVERT);
         break;
 
-    case 'B':
+    case 'B': // cmd: save config
         blind_save_config();
         break;
 
@@ -215,16 +215,16 @@ void monitor(void)
         }
         break;
 #endif
-    case 'i':
+    case 'i': // cmd: show ir code
         ir_show_code();
         break;
 
-    case 'l':
+    case 'l': // cmd: show limit switch
         p_hex(blind_at_limit());
         crnl();
         break;
 
-    case 'L':
+    case 'L': // cmd: character loop
         wdt_disable();
         while (1) {
             cmd = getch();
@@ -234,7 +234,7 @@ void monitor(void)
         }
         break;
 
-    case 't':
+    case 't': // cmd: tone test (1 chirp, 2 confirm, else arbitrary)
         if (n == 1)
             tone_start(TONE_CHIRP);
         else if (n == 2)
@@ -250,7 +250,7 @@ void monitor(void)
         motor_state_timer = get_ms_timer();
         break;
 
-    case 'P':
+    case 'P': // cmd: p_hex/p_dec/p_str testing
         {
             static const char *teststring = "foobar";
             // printf("testing: 0x%x, %s\n", 64, "hello");
@@ -263,24 +263,24 @@ void monitor(void)
         }
         break;
 
-    case 'v':
+    case 'v': // cmd: banner
         putstr(BANNER);
         break;
 
-    case 'q':
+    case 'q': // cmd: quick brown fox
 #define QUICKFOX "The Quick Brown Fox Jumps Over The Lazy Dog\n"
         for (i = 0; i < 20; i++)
             putstr(QUICKFOX);
         break;
 
-    case 'Q':
+    case 'Q': // cmd: UUUUU
         // print repeating 'U', which is a square wave on the transmit line
         for (i = 0; i < (80 * 20); i++)
             putch('U');
         putch('\n');
         break;
 
-    case 'e':
+    case 'e': // cmd: watchdog reboot
         // reboot us, using the watchdog
         wdt_enable(WDTO_250MS);
         for (;;);
@@ -301,23 +301,23 @@ void monitor(void)
         dump_config();
         break;
 
-    case 'w':
+    case 'w': // cmd:  write addr data
         // 'w addr data'
         addr = n;
         n = gethex();
         *(unsigned char *) addr = n;
         break;
 
-    case 'x':                   //  read 1 byte of data
-    case 'X':                   //  read 1 byte of code
+    case 'x':                   //  cmd: read data byte
+    case 'X':                   //  cmd: read code byte
         // 'x addr' or 'X addr'
         addr = n;
         addr_is_data = (cmd == 'x');
         // fallthrough
 
-    case '=':
-    case '+':
-    case '-':
+    case '=': // cmd: repeat read
+    case '+': // cmd: incr read
+    case '-': // cmd: decr read
         // show the contents of the next (or previous) address
         if (cmd == '+')
             addr++;

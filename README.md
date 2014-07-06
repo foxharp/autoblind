@@ -170,3 +170,24 @@ That's about it.  Oh -- I did need to add a pull-down to the motor on/off
 input (PA0) to keep the motor from turning on while programming
 the chip.  That 15K resistor goes from PA0 to ground.
 
+
+commands
+--------
+the IR remotes have 5 buttons defined:  top, middle, bottom, stop, and alt.
+these buttons have the following meanings:
+    top:     move blind to top position
+    middle:  move blind to middle position
+    bottom:  move blind to bottom position
+    stop:    stop blind movement
+
+    alt top
+    alt bottom:  force blind up/down past the top/bottom position
+
+    alt alt top
+    alt alt middle
+    alt alt bottom:    set the top/middle/bottom position
+
+    alt alt alt stop:  invert the sense of up/down
+
+    alt alt alt alt alt stop:  reset all positions to default
+

@@ -608,7 +608,7 @@ static void blind_ir(void)
 
     case IR_MIDDLE:
             if (alt) {
-                if (alt == 2) { // alt alt bottom
+                if (alt == 2) { // alt alt middle
                     do_blind_cmd(BL_SET_MIDDLE);
                 } else {
                     tone_start(TONE_ABORT);

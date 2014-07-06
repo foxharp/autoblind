@@ -173,8 +173,12 @@ the chip.  That 15K resistor goes from PA0 to ground.
 
 commands
 --------
-the IR remotes have 5 buttons defined:  top, middle, bottom, stop, and alt.
+the IR remotes have 5 buttons defined:
+
+    top, middle, bottom, stop, and alt.
+
 these buttons have the following meanings:
+
     top:     move blind to top position
     middle:  move blind to middle position
     bottom:  move blind to bottom position

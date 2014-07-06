@@ -7,7 +7,7 @@ VERSION = $(shell date +%y%m%d-%H%M)
 
 PROG = autoblind
 SRCS = main.c ir.c monitor.c util.c timer.c suart.c blind.c button.c
-HEADERS = $(shell echo *.h)
+HEADERS = blind.h button.h common.h ir.h suart.h timer.h util.h
 
 OBJS = $(subst .c,.o,$(SRCS))
 

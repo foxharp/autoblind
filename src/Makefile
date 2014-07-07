@@ -102,10 +102,16 @@ tarball: all clean
 program:
 	sudo avrdude -c usbtiny -p t861 -U $(PROG).hex
 
-# tip o' the hat to:
-# http://www.frank-zhao.com/fusecalc/fusecalc.php?chip=attiny861&LOW=62&HIGH=DC&EXTENDED=FF&LOCKBIT=FF
+# program maximum brown-out detection (4.3V)
 bod_fuse:
-	 sudo avrdude -c usbtiny -p t861 -U hfuse:w:0xDC:m
+	 sudo avrdude -c usbtiny -p t861 -U hfuse:w:0xdc:m
+
+# reset fuses to 861 defaults
+default_fuse:
+	 sudo avrdude -c usbtiny -p t861 \
+		-U lfuse:w:0x62:m \
+		-U hfuse:w:0xdf:m \
+		-U efuse:w:0x01:m
 
 clean:
 	rm -f *.o *.flash *.flash.* *.out *.map *.lst *.lss

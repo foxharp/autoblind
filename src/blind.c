@@ -40,6 +40,9 @@
 
 #define MAXPOS 32000
 
+// failsafe: maximum time to move entire height of window
+#define MAX_RUNTIME 11500  // 11.5 seconds
+
 /*
  * for the motor state machine, we set motor_next to the state we
  * wish the motor to advance to.  the state machine churns until
@@ -475,6 +478,12 @@ static void motor_state(void)
         }
     }
 
+    if (motor_cur != MOTOR_STOPPED &&
+            check_timer(motor_state_timer, MAX_RUNTIME)) {
+        putstr("long run!\n");
+        motor_next = MOTOR_STOPPED;
+    }
+
     if (motor_next == motor_cur) {
         return;
     }
@@ -482,8 +491,9 @@ static void motor_state(void)
     switch (motor_cur) {
     case MOTOR_DOWN:
     case MOTOR_UP:
-        // if we're currently moving, then no matter what,
-        // we stop first.
+        // if we're currently moving, we always stop -- no
+        // throwing it into reverse.
+        // stopping involves first removing power
         set_motion(0);
 
         motor_cur = MOTOR_STOPPING;
@@ -495,7 +505,9 @@ static void motor_state(void)
     case MOTOR_STOPPING:
         // wait for prior transitions to complete...
         if (check_timer(motor_state_timer, 50)) {
-            // ...then we reverse the direction relay to force a stop
+            // ...then we reverse the direction relay to force a stop.
+            // this essentially applies the brakes -- power was removed
+            // above.
             set_direction(!get_direction());
 
             motor_cur = MOTOR_BRAKING;

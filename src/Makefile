@@ -104,14 +104,21 @@ program:
 
 # program maximum brown-out detection (4.3V)
 bod_fuse:
-	 sudo avrdude -c usbtiny -p t861 -U hfuse:w:0xdc:m
+	sudo avrdude -c usbtiny -p t861 -U hfuse:w:0xdc:m
 
 # reset fuses to 861 defaults
 default_fuse:
-	 sudo avrdude -c usbtiny -p t861 \
+	sudo avrdude -c usbtiny -p t861 \
 		-U lfuse:w:0x62:m \
 		-U hfuse:w:0xdf:m \
 		-U efuse:w:0x01:m
+
+dump_fuse:
+	sudo avrdude -c usbtiny -p t861 \
+		-U lfuse:r:-:h \
+		-U hfuse:r:-:h \
+		-U efuse:r:-:h \
+		-U lock:r:-:h
 
 clean:
 	rm -f *.o *.flash *.flash.* *.out *.map *.lst *.lss

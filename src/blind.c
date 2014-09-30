@@ -184,6 +184,13 @@ char get_direction(void)
     return !!(PINMOTOR & bit(P_MOTOR_DIR));
 }
 
+/*
+ * NOTE:  i no longer use this mechanism.  the limit switch
+ * is now connected directly to the RESET input of the AVR,
+ * making sure that the blinds will stop dead, immediately,
+ * when the limit is reached, regardless of whatever else might
+ * be going on with the code.  Leaving this code here is harmless.
+ */
 char blind_at_limit(void)
 {
     /* detect the limit switch */

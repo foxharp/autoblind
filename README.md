@@ -85,6 +85,15 @@ that worked, but was harder to mount than I'd like.  I think I'll
 explore using a standard burglar-alarm style magnetic sensor
 next.
 
+[ In the end, I made two changes to the limit switch mechanism.
+First, I did switch to a normally open burglar-alarm style window
+sensor, mounted not at the window sill but down on the box that
+holds the motor, close to the cord winding pulley.  Second, I
+connected the switch's normally open contact directly to the AVR
+RESET line.  I realized that doing anything else left the limit
+mechanism to whatever software or hardware glitch might have kept
+the normal start/stop mechanisms from working in the first place. ]
+
 The motors themselves include an odd combination of digital
 hardware.  There's some 12V logic that includes closure-to-ground
 control for motor on/off and direction control.  There's also a
